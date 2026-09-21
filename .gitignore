@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.pyinstaller/
+.paddlex-cache/
+.app-support*/
+.spike/
+*.pyc
+build/
+dist/
+*.egg-info/
+.DS_Store
+:memory:.ses
+Find-That-Text-v*-macOS-Apple-Silicon.dmg
+Find-That-Text-v*-SHA256.txt
+reports/
+sample-output/
