@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0
+
+- Added a custom scan mode for checking every user-selected number of frames.
+- Added a Text Strictness slider for filtering uncertain OCR results by confidence.
+- Added scan settings to HTML and raw JSON report metadata.
+
 ## 1.0.0
 
 - Initial project implementation.

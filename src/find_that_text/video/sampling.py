@@ -33,16 +33,28 @@ class ScanMode:
         return "custom"
 
 
-def resolve_scan_mode(mode: str, custom_interval: float | None = None) -> ScanMode:
+def resolve_scan_mode(
+    mode: str,
+    custom_frame_step: int | None = None,
+    custom_interval_seconds: float | None = None,
+) -> ScanMode:
     key = mode.lower().strip()
     if key in {"default", "standard"}:
         return ScanMode("default", frame_step=SCAN_MODE_FRAME_STEPS["default"])
     if key in {"advanced", "every-frame", "every_frame", "thorough"}:
         return ScanMode("advanced", frame_step=SCAN_MODE_FRAME_STEPS["advanced"])
     if key == "custom":
-        if custom_interval is None or custom_interval <= 0:
-            raise ValueError("Custom scan mode requires a positive interval.")
-        return ScanMode("custom", custom_interval)
+        if custom_frame_step is not None:
+            if (
+                isinstance(custom_frame_step, bool)
+                or not isinstance(custom_frame_step, int)
+                or custom_frame_step <= 0
+            ):
+                raise ValueError("Custom frame interval must be a positive whole number.")
+            return ScanMode("custom", frame_step=custom_frame_step)
+        if custom_interval_seconds is not None and custom_interval_seconds > 0:
+            return ScanMode("custom", interval_seconds=custom_interval_seconds)
+        raise ValueError("Custom scan mode requires a positive frame interval.")
     if key not in LEGACY_SCAN_MODE_INTERVALS:
         raise ValueError(f"Unknown scan mode: {mode}")
     return ScanMode(key, LEGACY_SCAN_MODE_INTERVALS[key])

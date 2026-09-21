@@ -21,7 +21,25 @@ def build_parser() -> argparse.ArgumentParser:
         default="default",
         help="default checks every 23 frames; advanced checks every frame.",
     )
-    scan.add_argument("--custom-interval", type=float, default=None, help="Legacy custom interval in seconds.")
+    custom = scan.add_mutually_exclusive_group()
+    custom.add_argument(
+        "--custom-frame-step",
+        type=int,
+        default=None,
+        help="For custom mode, check every Nth frame.",
+    )
+    custom.add_argument(
+        "--custom-interval",
+        type=float,
+        default=None,
+        help="Legacy custom interval in seconds.",
+    )
+    scan.add_argument(
+        "--min-confidence",
+        type=float,
+        default=0.5,
+        help="Keep OCR results at or above this confidence from 0.0 to 1.0.",
+    )
     scan.add_argument("--start", type=parse_timestamp, default=None, help="Start timestamp, for example 00:00:00.")
     scan.add_argument("--end", type=parse_timestamp, default=None, help="End timestamp, for example 00:30:30.")
     scan.add_argument("--output", type=Path, default=None, help="Output root folder.")
@@ -42,7 +60,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "scan":
         settings = ScanSettings(
             mode=args.mode,
+            custom_frame_step=args.custom_frame_step,
             custom_interval_seconds=args.custom_interval,
+            min_ocr_confidence=args.min_confidence,
             start_seconds=args.start,
             end_seconds=args.end,
             output_root=args.output,

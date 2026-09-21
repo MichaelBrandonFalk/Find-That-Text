@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+import math
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterable
 
-from find_that_text.ocr.engine import OCREngine, PaddleOCREngine
+from find_that_text.ocr.engine import OCREngine, OCRTextObservation, PaddleOCREngine
 from find_that_text.ocr.tiling import recognize_with_optional_tiling
 from find_that_text.reports.csv_report import write_csv_report
 from find_that_text.reports.html_report import write_html_report
@@ -30,7 +31,9 @@ class ScanCancelled(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class ScanSettings:
     mode: str = "default"
+    custom_frame_step: int | None = None
     custom_interval_seconds: float | None = None
+    min_ocr_confidence: float = 0.5
     start_seconds: float | None = None
     end_seconds: float | None = None
     output_root: str | Path | None = None
@@ -88,7 +91,12 @@ def scan_video(
     cancel_event: threading.Event | None = None,
 ) -> ScanResult:
     settings = settings or ScanSettings()
-    scan_mode = resolve_scan_mode(settings.mode, settings.custom_interval_seconds)
+    min_ocr_confidence = validate_min_ocr_confidence(settings.min_ocr_confidence)
+    scan_mode = resolve_scan_mode(
+        settings.mode,
+        custom_frame_step=settings.custom_frame_step,
+        custom_interval_seconds=settings.custom_interval_seconds,
+    )
     metadata = read_video_metadata(video_path)
     start_seconds, end_seconds = _resolve_scan_range(metadata, settings)
     sample_interval_seconds = estimated_sample_interval_seconds(scan_mode, metadata.average_rate)
@@ -131,9 +139,7 @@ def scan_video(
             sample.image_rgb,
             enable_tiling=tiling_enabled,
         )
-        for observation in observations:
-            if not observation.text.strip():
-                continue
+        for observation in filter_ocr_observations(observations, min_ocr_confidence):
             detections.append(
                 OCRDetection(
                     timestamp_seconds=sample.timestamp_seconds,
@@ -181,6 +187,7 @@ def scan_video(
         ocr_model=ocr_model,
         scan_start_seconds=start_seconds,
         scan_end_seconds=end_seconds,
+        min_ocr_confidence=min_ocr_confidence,
     )
     write_raw_json(
         raw_json,
@@ -191,10 +198,30 @@ def scan_video(
         ocr_model=ocr_model,
         scan_start_seconds=start_seconds,
         scan_end_seconds=end_seconds,
+        min_ocr_confidence=min_ocr_confidence,
     )
 
     LOGGER.info("Scan complete events=%d detections=%d output=%s", len(events), len(detections), output_dir)
     return ScanResult(output_dir, metadata, scan_mode, detections, events, report_html, report_csv, raw_json)
+
+
+def validate_min_ocr_confidence(value: float) -> float:
+    confidence = float(value)
+    if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
+        raise ValueError("Text strictness must be between 0% and 100%.")
+    return confidence
+
+
+def filter_ocr_observations(
+    observations: Iterable[OCRTextObservation],
+    min_confidence: float,
+) -> list[OCRTextObservation]:
+    threshold = validate_min_ocr_confidence(min_confidence)
+    return [
+        observation
+        for observation in observations
+        if observation.text.strip() and observation.confidence >= threshold
+    ]
 
 
 def _should_tile(settings: ScanSettings, metadata: VideoMetadata, scan_mode: ScanMode) -> bool:

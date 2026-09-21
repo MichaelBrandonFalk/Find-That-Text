@@ -6,7 +6,7 @@ Find That Text is a local macOS utility for scanning full video frames, not just
 
 ## Download
 
-The initial public binary is planned for `v1.0.0` through GitHub Releases. Until the release workflow has been exercised with a signed or unsigned build, use the source build instructions below.
+Download the Apple Silicon app from the [latest GitHub Release](https://github.com/MichaelBrandonFalk/Find-That-Text/releases/latest), or visit the [Find That Text website](https://michaelbrandonfalk.github.io/Find-That-Text/).
 
 ## What It Finds
 
@@ -20,11 +20,12 @@ The initial public binary is planned for `v1.0.0` through GitHub Releases. Until
 ## How It Works
 
 1. Choose or drop in a MOV, MP4, or M4V video.
-2. Select Default or Advanced scan mode.
-3. Scan locally on your Mac.
-4. Review the CSV, HTML report, evidence screenshots, and raw OCR JSON.
+2. Select Default, Advanced, or a custom frame interval.
+3. Adjust Text Strictness to include uncertain results or retain only clear text.
+4. Scan locally on your Mac.
+5. Review the CSV, HTML report, evidence screenshots, and raw OCR JSON.
 
-Default mode checks every 23rd frame. Advanced mode checks every frame. The full video is scanned unless you enter a start and/or end timestamp such as `00:00:00` to `00:30:30`.
+Default mode checks every 23rd frame. Advanced mode checks every frame. Custom mode checks every frame interval you specify. The full video is scanned unless you enter a start and/or end timestamp such as `00:00:00` to `00:30:30`.
 
 ## Reports
 
@@ -72,6 +73,7 @@ To scan from the CLI:
 ```bash
 find-that-text scan "/path/to/movie.mov" --mode default
 find-that-text scan "/path/to/movie.mov" --mode advanced --start 00:00:00 --end 00:30:30
+find-that-text scan "/path/to/movie.mov" --mode custom --custom-frame-step 7 --min-confidence 0.75
 ```
 
 ## Packaging

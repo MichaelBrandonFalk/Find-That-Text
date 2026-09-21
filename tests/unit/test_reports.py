@@ -43,6 +43,7 @@ def test_reports_write_expected_files(tmp_path: Path) -> None:
         metadata=metadata,
         scan_mode=scan_mode,
         ocr_model="test-model",
+        min_ocr_confidence=0.75,
     )
     write_raw_json(
         tmp_path / "raw_detections.json",
@@ -51,8 +52,13 @@ def test_reports_write_expected_files(tmp_path: Path) -> None:
         metadata=metadata,
         scan_mode=scan_mode,
         ocr_model="test-model",
+        min_ocr_confidence=0.75,
     )
 
     assert "HELLO WORLD" in (tmp_path / "report.csv").read_text(encoding="utf-8")
-    assert "HELLO WORLD" in (tmp_path / "report.html").read_text(encoding="utf-8")
-    assert '"detections"' in (tmp_path / "raw_detections.json").read_text(encoding="utf-8")
+    html = (tmp_path / "report.html").read_text(encoding="utf-8")
+    raw_json = (tmp_path / "raw_detections.json").read_text(encoding="utf-8")
+    assert "HELLO WORLD" in html
+    assert "Minimum confidence 75%" in html
+    assert '"detections"' in raw_json
+    assert '"minimum_ocr_confidence": 0.75' in raw_json

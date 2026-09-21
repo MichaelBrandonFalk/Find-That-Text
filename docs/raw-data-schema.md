@@ -7,7 +7,7 @@ Top-level fields:
 - `schema_version`: integer schema version.
 - `application` and `application_version`: generator metadata.
 - `source`: filename, duration, resolution, codec, and frame-rate metadata.
-- `scan`: scan mode, frame step or legacy interval, optional start/end range, and OCR model/backend description.
+- `scan`: scan mode, frame step or legacy interval, optional start/end range, minimum OCR confidence, and OCR model/backend description.
 - `events`: grouped event summaries with references to raw detection indexes.
 - `detections`: all raw OCR detections.
 

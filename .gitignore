@@ -13,5 +13,5 @@ dist/
 :memory:.ses
 Find-That-Text-v*-macOS-Apple-Silicon.dmg
 Find-That-Text-v*-SHA256.txt
-reports/
+/reports/
 sample-output/

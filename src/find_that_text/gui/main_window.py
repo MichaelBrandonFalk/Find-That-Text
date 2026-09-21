@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
     QGridLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -20,6 +21,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QProgressBar,
+    QSlider,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -94,7 +97,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Find That Text")
-        self.resize(720, 520)
+        self.resize(720, 650)
         self.video_path: Path | None = None
         self.output_dir: Path | None = None
         self.thread: ScanThread | None = None
@@ -130,8 +133,9 @@ class MainWindow(QMainWindow):
 
         form = QGridLayout()
         self.mode_combo = QComboBox()
-        self.mode_combo.addItem("Default", "default")
-        self.mode_combo.addItem("Advanced", "advanced")
+        self.mode_combo.addItem("Default - every 23 frames", "default")
+        self.mode_combo.addItem("Advanced - every frame", "advanced")
+        self.mode_combo.addItem("Custom frame interval", "custom")
         self.start_time_input = QLineEdit()
         self.start_time_input.setPlaceholderText("00:00:00")
         self.end_time_input = QLineEdit()
@@ -148,6 +152,36 @@ class MainWindow(QMainWindow):
         form.addWidget(QLabel("Output"), 4, 0)
         form.addWidget(self.output_label, 4, 1)
         layout.addLayout(form)
+
+        advanced_group = QGroupBox("Advanced Settings")
+        advanced_form = QGridLayout(advanced_group)
+
+        self.custom_frame_step = QSpinBox()
+        self.custom_frame_step.setRange(1, 100_000)
+        self.custom_frame_step.setValue(23)
+        self.custom_frame_step.setSuffix(" frames")
+        advanced_form.addWidget(QLabel("Frame Interval"), 0, 0)
+        advanced_form.addWidget(self.custom_frame_step, 0, 1)
+
+        self.strictness_slider = QSlider(Qt.Orientation.Horizontal)
+        self.strictness_slider.setRange(0, 95)
+        self.strictness_slider.setValue(50)
+        self.strictness_slider.setTickInterval(5)
+        self.strictness_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.strictness_value = QLabel()
+        strictness_row = QHBoxLayout()
+        strictness_row.addWidget(QLabel("Detect more"))
+        strictness_row.addWidget(self.strictness_slider, 1)
+        strictness_row.addWidget(QLabel("Clear text only"))
+        advanced_form.addWidget(QLabel("Text Strictness"), 1, 0)
+        advanced_form.addLayout(strictness_row, 1, 1)
+        advanced_form.addWidget(self.strictness_value, 2, 1)
+        layout.addWidget(advanced_group)
+
+        self.mode_combo.currentIndexChanged.connect(self._sync_scan_mode_controls)
+        self.strictness_slider.valueChanged.connect(self._update_strictness_label)
+        self._sync_scan_mode_controls()
+        self._update_strictness_label(self.strictness_slider.value())
 
         self.progress = QProgressBar()
         self.progress.setRange(0, 1000)
@@ -212,6 +246,8 @@ class MainWindow(QMainWindow):
             return
         settings = ScanSettings(
             mode=str(self.mode_combo.currentData()),
+            custom_frame_step=self.custom_frame_step.value(),
+            min_ocr_confidence=self.strictness_slider.value() / 100.0,
             start_seconds=start_seconds,
             end_seconds=end_seconds,
             save_annotated_screenshots=self.annotated_check.isChecked(),
@@ -264,6 +300,18 @@ class MainWindow(QMainWindow):
     def open_output_folder(self) -> None:
         if self.output_dir:
             subprocess.run(["open", str(self.output_dir)], check=False)
+
+    def _sync_scan_mode_controls(self, _index: int = -1) -> None:
+        self.custom_frame_step.setEnabled(self.mode_combo.currentData() == "custom")
+
+    def _update_strictness_label(self, value: int) -> None:
+        if value <= 25:
+            label = "More results"
+        elif value >= 75:
+            label = "Clear text only"
+        else:
+            label = "Balanced"
+        self.strictness_value.setText(f"{label} - minimum confidence {value}%")
 
     @staticmethod
     def _optional_timestamp(value: str) -> float | None:
