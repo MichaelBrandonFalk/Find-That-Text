@@ -1,8 +1,8 @@
 # Release Checklist
 
-For `v1.0.0`, verify each item before publishing release binaries.
+Verify each item before publishing release binaries.
 
-- [ ] Version is `1.0.0`
+- [ ] Version and Git tag match
 - [ ] CHANGELOG updated
 - [ ] Unit tests pass
 - [ ] Integration tests pass
@@ -14,6 +14,11 @@ For `v1.0.0`, verify each item before publishing release binaries.
 - [ ] MP4 tested
 - [ ] CSV verified
 - [ ] HTML verified
+- [ ] SRT caption optimization verified
+- [ ] VTT caption optimization verified
+- [ ] No-caption fallback verified
+- [ ] Scene-change sampling verified
+- [ ] Likely / Review / Background bucketing verified
 - [ ] Screenshots verified
 - [ ] Raw JSON verified
 - [ ] Packaged `.app` tested

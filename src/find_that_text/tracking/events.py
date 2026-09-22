@@ -5,6 +5,7 @@ from statistics import mean
 from typing import Any
 
 from find_that_text.tracking.geometry import classify_position, union_box
+from find_that_text.ocr.normalize import normalize_text
 from find_that_text.util.timestamps import format_timestamp
 
 
@@ -19,6 +20,7 @@ class OCRDetection:
     frame_height: int
     frame_index: int
     source_filename: str
+    detector_confidence: float | None = None
 
     @property
     def timestamp(self) -> str:
@@ -30,6 +32,11 @@ class OCRDetection:
             "timestamp": self.timestamp,
             "text": self.text,
             "confidence": round(float(self.confidence), 6),
+            "detector_confidence": (
+                round(float(self.detector_confidence), 6)
+                if self.detector_confidence is not None
+                else None
+            ),
             "polygon": self.polygon,
             "box": {
                 "x": round(self.box[0], 3),
@@ -51,6 +58,14 @@ class TextEvent:
     detections: list[OCRDetection] = field(default_factory=list)
     screenshot: str = ""
     annotated_screenshot: str = ""
+    relevance_score: float = 0.0
+    review_bucket: str = "Needs Review"
+    relevance_reasons: list[str] = field(default_factory=list)
+    dialogue_free_ratio: float | None = None
+    near_scene_change: bool = False
+    title_like: bool = False
+    credit_sequence: bool = False
+    repeated_graphic: bool = False
 
     @property
     def start_seconds(self) -> float:
@@ -68,7 +83,21 @@ class TextEvent:
     def text(self) -> str:
         if not self.detections:
             return ""
-        return max(self.detections, key=lambda d: (len(d.text), d.confidence)).text
+        timestamp_groups: dict[float, list[OCRDetection]] = {}
+        for detection in self.detections:
+            timestamp_groups.setdefault(round(detection.timestamp_seconds, 3), []).append(detection)
+        representative = max(
+            timestamp_groups.values(),
+            key=lambda group: sum(len(detection.text.strip()) * detection.confidence for detection in group),
+        )
+        lines: list[str] = []
+        seen: set[str] = set()
+        for detection in sorted(representative, key=lambda item: (item.box[1], item.box[0])):
+            normalized = normalize_text(detection.text)
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                lines.append(detection.text.strip())
+        return " / ".join(lines)
 
     @property
     def average_confidence(self) -> float:
@@ -77,6 +106,15 @@ class TextEvent:
     @property
     def maximum_confidence(self) -> float:
         return max((d.confidence for d in self.detections), default=0.0)
+
+    @property
+    def maximum_detector_confidence(self) -> float | None:
+        values = [
+            detection.detector_confidence
+            for detection in self.detections
+            if detection.detector_confidence is not None
+        ]
+        return max(values) if values else None
 
     @property
     def best_detection(self) -> OCRDetection | None:
@@ -109,6 +147,14 @@ class TextEvent:
     def persistent(self) -> bool:
         return self.duration_seconds >= 15
 
+    @property
+    def bucket_rank(self) -> int:
+        return {
+            "Likely Forced Text": 0,
+            "Needs Review": 1,
+            "Background / Credits / Repeated Graphics": 2,
+        }.get(self.review_bucket, 1)
+
     def to_row(self) -> dict[str, str]:
         box = self.bounding_box
         source_filename = self.detections[0].source_filename if self.detections else ""
@@ -120,6 +166,17 @@ class TextEvent:
             "Detected Text": self.text,
             "Average Confidence": f"{self.average_confidence:.3f}",
             "Maximum Confidence": f"{self.maximum_confidence:.3f}",
+            "Detector Confidence": (
+                f"{self.maximum_detector_confidence:.3f}"
+                if self.maximum_detector_confidence is not None
+                else ""
+            ),
+            "Relevance Score": f"{self.relevance_score:.3f}",
+            "Review Bucket": self.review_bucket,
+            "Why Flagged": "; ".join(self.relevance_reasons),
+            "Dialogue-Free Ratio": (
+                f"{self.dialogue_free_ratio:.3f}" if self.dialogue_free_ratio is not None else ""
+            ),
             "Position": self.position,
             "Bounding Box": f"{box[0]:.1f},{box[1]:.1f},{box[2]:.1f},{box[3]:.1f}",
             "Detection Count": str(len(self.detections)),

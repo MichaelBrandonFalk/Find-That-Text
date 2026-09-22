@@ -2,7 +2,7 @@
 
 Find That Text processes videos locally on your computer.
 
-Videos, screenshots, OCR results, filenames, and reports are not uploaded by Find That Text.
+Videos, dialogue caption files, screenshots, OCR results, filenames, and reports are not uploaded by Find That Text.
 
 The application does not require an account.
 

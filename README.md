@@ -1,8 +1,8 @@
 # Find That Text
 
-Find visible text anywhere in a video and generate timestamped local OCR reports.
+Find likely forced-text moments in a movie without rewatching the entire program.
 
-Find That Text is a local macOS utility for scanning full video frames, not just subtitle streams. It is intended for Apple Silicon Macs and uses a PaddleOCR-based OCR pipeline.
+Find That Text is a free, open-source macOS utility for subtitle and localization teams. It scans visible text in video frames, groups repeated detections into screen-text moments, and produces a ranked local review report. It is designed for Apple Silicon Macs and keeps the video, captions, screenshots, and OCR results on the computer.
 
 ## Download
 
@@ -10,40 +10,59 @@ Download the Apple Silicon app from the [latest GitHub Release](https://github.c
 
 ## What It Finds
 
-- Phone messages
-- Signs and storefront text
-- Lower thirds and title cards
-- Computer screens and websites
-- Credits, dates, warning text, logos, and watermarks
-- Text embedded in graphics or background footage
+- Opening titles and location/date cards
+- Phone messages and computer screens
+- Plot-relevant signs, letters, and warnings
+- Lower thirds and other embedded graphics
+- Credits, logos, watermarks, and uncertain text for secondary review
 
-## How It Works
+The app does not decide what is essential to the plot. It creates a short, ranked set of moments for a human reviewer.
+
+## Recommended Scan
 
 1. Choose or drop in a MOV, MP4, or M4V video.
-2. Select Default, Advanced, or a custom frame interval.
-3. Adjust Text Strictness to include uncertain results or retain only clear text.
-4. Scan locally on your Mac.
-5. Review the CSV, HTML report, evidence screenshots, and raw OCR JSON.
+2. Optionally choose English or Spanish dialogue captions in SRT or VTT format. A matching sidecar is selected automatically when available.
+3. Leave **Scan dialogue gaps more closely** enabled to scan silent sections more densely.
+4. Scan the full video or enter an optional start/end range.
+5. Review **Likely Forced Text** first, then **Needs Review**. Background graphics and credits remain available in a collapsed section.
 
-Default mode checks every 23rd frame. Advanced mode checks every frame. Custom mode checks every frame interval you specify. The full video is scanned unless you enter a start and/or end timestamp such as `00:00:00` to `00:30:30`.
+Captions are optional. Without captions, Find That Text uses a uniform adaptive scan and scene changes. This supports workflows both before and after dialogue captions are created.
+
+## How Scanning Works
+
+Recommended mode uses several signals together:
+
+- A one-second heartbeat when no dialogue captions are available
+- Half-second sampling in dialogue-free gaps and two-second sampling during dialogue when optimization is enabled
+- Priority samples at quiet-gap boundaries and scene changes
+- PP-OCRv6 small detection and recognition models on frames capped at 1280 pixels
+- Detector confidence, OCR confidence, temporal confirmation, text shape, screen size and position, dialogue gaps, repeated graphics, and credit-density scoring
+
+Nothing is removed solely because it receives a low relevance score. Every grouped event is included in one of three report sections, and the raw JSON preserves the underlying detections.
+
+Diagnostic every-frame mode and a custom frame interval remain available under Advanced Settings. Every-frame mode is intended for short ranges because a feature-length scan can take much longer.
 
 ## Reports
 
 Each scan writes a folder containing:
 
-- `report.html` - searchable local HTML report
-- `report.csv` - QC-friendly event summary
-- `raw_detections.json` - every raw OCR detection
+- `report.html` - ranked and searchable forced-text candidate report
+- `report.csv` - QC-friendly event summary with scores and reasons
+- `raw_detections.json` - every OCR detection and scan setting
 - `screenshots/` - clean and optional annotated evidence frames
+
+## Performance Target
+
+The recommended pipeline is designed to scan a two-hour feature in two hours or less on supported Apple Silicon hardware. Actual time depends on the Mac, source codec, dialogue density, scene count, and detected text volume. Full-feature benchmarking remains part of release validation; the app does not present a guaranteed completion time.
 
 ## Privacy
 
-All normal scanning is local. Videos, screenshots, OCR results, filenames, and reports are not uploaded by Find That Text. See [PRIVACY.md](PRIVACY.md).
+All normal scanning is local. Videos, caption files, screenshots, OCR results, filenames, and reports are not uploaded by Find That Text. See [PRIVACY.md](PRIVACY.md).
 
 ## System Requirements
 
 - Apple Silicon Mac
-- macOS 14 or newer is the current packaging target because several current arm64 wheels target macOS 14+
+- macOS 14 or newer
 - Python 3.13 for development builds
 
 ## Build From Source
@@ -58,38 +77,31 @@ python -m pytest
 python -m find_that_text.cli --help
 ```
 
-To run the GUI from source:
+To run the GUI:
 
 ```bash
 python -m find_that_text.app
 ```
 
-PaddleOCR/PaddleX model cache files are stored under `~/Library/Application Support/Find That Text/PaddleX` by default. For validation or portable test runs, set `FIND_THAT_TEXT_APP_SUPPORT` or `PADDLE_PDX_CACHE_HOME` before launching.
-
-Release builds can include `.paddlex-cache/official_models` as bundled resources. On first launch, the app copies those bundled models into the writable PaddleX cache before initializing OCR so ordinary scans do not require internet access.
-
 To scan from the CLI:
 
 ```bash
-find-that-text scan "/path/to/movie.mov" --mode default
-find-that-text scan "/path/to/movie.mov" --mode advanced --start 00:00:00 --end 00:30:30
-find-that-text scan "/path/to/movie.mov" --mode custom --custom-frame-step 7 --min-confidence 0.75
+find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.en.srt"
+find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.es.vtt" --start 00:00:00 --end 00:30:30
+find-that-text scan "/path/to/movie.mov" --no-dialogue-optimization
+find-that-text scan "/path/to/movie.mov" --mode custom --custom-frame-step 7 --review-breadth 0.35
 ```
 
-## Packaging
+Release builds bundle the PP-OCRv6 small models. On first launch, the app copies those models into `~/Library/Application Support/Find That Text/PaddleX`; normal scans do not need internet access.
 
-The packaging scripts target an onedir PyInstaller macOS `.app` bundle, then wrap it in a DMG. Onefile packaging is intentionally avoided for the ML-heavy runtime.
+## Packaging
 
 ```bash
 scripts/build_macos.sh
 scripts/package_dmg.sh
 ```
 
-Signing and notarization are supported when Apple Developer credentials are provided through environment variables in the release workflow. Unsigned builds can still be produced for local testing.
-
-## Current Validation Status
-
-See [docs/technical-validation.md](docs/technical-validation.md). The repository includes implementation, tests for tracking/reporting logic, CI/release/Pages workflows, and packaging scripts. OCR/video/package proof tests must be run in a fresh Apple Silicon environment before publishing `v1.0.0`.
+The build creates a PyInstaller `.app` bundle and an Apple Silicon DMG. Signing and notarization are used when Apple Developer credentials are provided. Unsigned builds may require macOS **Open** or **Open Anyway**.
 
 ## License
 

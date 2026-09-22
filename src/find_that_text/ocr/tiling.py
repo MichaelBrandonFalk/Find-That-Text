@@ -60,7 +60,13 @@ def _translate_observation(
         observation.box[2],
         observation.box[3],
     )
-    return OCRTextObservation(observation.text, observation.confidence, polygon, box)
+    return OCRTextObservation(
+        observation.text,
+        observation.confidence,
+        polygon,
+        box,
+        observation.detector_confidence,
+    )
 
 
 def _dedupe_observations(

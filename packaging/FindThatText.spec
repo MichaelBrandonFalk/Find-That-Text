@@ -15,10 +15,12 @@ datas = [
 for package_name in [
     "imagesize",
     "opencv-contrib-python",
+    "opencv-python",
     "pyclipper",
     "pypdfium2",
     "python-bidi",
     "shapely",
+    "scenedetect",
 ]:
     datas += copy_metadata(package_name)
 paddlex_spec = importlib.util.find_spec("paddlex")
@@ -29,7 +31,10 @@ if paddlex_spec and paddlex_spec.submodule_search_locations:
         datas.append((str(ocr_pipeline_config), "PaddleX/configs/pipelines"))
 model_cache = project_root / ".paddlex-cache" / "official_models"
 if model_cache.exists():
-    datas.append((str(model_cache), "PaddleX/official_models"))
+    for model_name in ["PP-OCRv6_small_det", "PP-OCRv6_small_rec"]:
+        model_dir = model_cache / model_name
+        if model_dir.exists():
+            datas.append((str(model_dir), f"PaddleX/official_models/{model_name}"))
 
 a = Analysis(
     [str(project_root / "src" / "find_that_text" / "app.py")],
@@ -39,6 +44,8 @@ a = Analysis(
     hiddenimports=[
         "paddle",
         "paddleocr",
+        "scenedetect",
+        "scenedetect.detectors",
         "av",
         "PySide6.QtCore",
         "PySide6.QtGui",

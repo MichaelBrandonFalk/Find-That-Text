@@ -27,7 +27,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from find_that_text.captions import find_sidecar_caption
 from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, scan_video
+from find_that_text.tracking.relevance import LIKELY_FORCED_TEXT, NEEDS_REVIEW, bucket_counts
 from find_that_text.util.paths import default_reports_root
 from find_that_text.util.timestamps import format_timestamp, parse_timestamp
 from find_that_text.version import __version__
@@ -97,8 +99,9 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Find That Text")
-        self.resize(720, 650)
+        self.resize(780, 780)
         self.video_path: Path | None = None
+        self.caption_path: Path | None = None
         self.output_dir: Path | None = None
         self.thread: ScanThread | None = None
         self._build_ui()
@@ -108,7 +111,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
         layout = QVBoxLayout(root)
         layout.setContentsMargins(28, 24, 28, 24)
-        layout.setSpacing(18)
+        layout.setSpacing(16)
 
         header = QHBoxLayout()
         title = QLabel("Find That Text")
@@ -131,57 +134,85 @@ class MainWindow(QMainWindow):
         choose_row.addWidget(self.choose_button)
         layout.addLayout(choose_row)
 
-        form = QGridLayout()
-        self.mode_combo = QComboBox()
-        self.mode_combo.addItem("Default - every 23 frames", "default")
-        self.mode_combo.addItem("Advanced - every frame", "advanced")
-        self.mode_combo.addItem("Custom frame interval", "custom")
+        caption_group = QGroupBox("Dialogue Captions")
+        caption_layout = QVBoxLayout(caption_group)
+        caption_row = QHBoxLayout()
+        self.caption_label = QLabel("No SRT or VTT selected")
+        self.caption_label.setObjectName("captionLabel")
+        self.caption_button = QPushButton("Choose SRT/VTT")
+        self.caption_button.clicked.connect(self.choose_caption)
+        self.clear_caption_button = QPushButton("Clear")
+        self.clear_caption_button.clicked.connect(self.clear_caption)
+        caption_row.addWidget(self.caption_label, 1)
+        caption_row.addWidget(self.caption_button)
+        caption_row.addWidget(self.clear_caption_button)
+        caption_layout.addLayout(caption_row)
+        self.dialogue_optimization_check = QCheckBox("Scan dialogue gaps more closely")
+        self.dialogue_optimization_check.setChecked(True)
+        caption_layout.addWidget(self.dialogue_optimization_check)
+        layout.addWidget(caption_group)
+
+        range_form = QGridLayout()
         self.start_time_input = QLineEdit()
         self.start_time_input.setPlaceholderText("00:00:00")
         self.end_time_input = QLineEdit()
         self.end_time_input.setPlaceholderText("Full video")
-        self.annotated_check = QCheckBox("Save annotated screenshots")
-        self.output_label = QLabel(str(default_reports_root()))
-        form.addWidget(QLabel("Scan Mode"), 0, 0)
-        form.addWidget(self.mode_combo, 0, 1)
-        form.addWidget(QLabel("Start"), 1, 0)
-        form.addWidget(self.start_time_input, 1, 1)
-        form.addWidget(QLabel("End"), 2, 0)
-        form.addWidget(self.end_time_input, 2, 1)
-        form.addWidget(self.annotated_check, 3, 1)
-        form.addWidget(QLabel("Output"), 4, 0)
-        form.addWidget(self.output_label, 4, 1)
-        layout.addLayout(form)
+        range_form.addWidget(QLabel("Start"), 0, 0)
+        range_form.addWidget(self.start_time_input, 0, 1)
+        range_form.addWidget(QLabel("End"), 1, 0)
+        range_form.addWidget(self.end_time_input, 1, 1)
+        layout.addLayout(range_form)
 
-        advanced_group = QGroupBox("Advanced Settings")
-        advanced_form = QGridLayout(advanced_group)
+        self.advanced_toggle = QPushButton("Show Advanced Settings")
+        self.advanced_toggle.setCheckable(True)
+        self.advanced_toggle.toggled.connect(self._toggle_advanced)
+        layout.addWidget(self.advanced_toggle)
+
+        self.advanced_group = QGroupBox("Advanced Settings")
+        advanced_form = QGridLayout(self.advanced_group)
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItem("Recommended - adaptive scan", "default")
+        self.mode_combo.addItem("Diagnostic - every frame", "advanced")
+        self.mode_combo.addItem("Custom frame interval", "custom")
+        advanced_form.addWidget(QLabel("Scan Mode"), 0, 0)
+        advanced_form.addWidget(self.mode_combo, 0, 1)
 
         self.custom_frame_step = QSpinBox()
         self.custom_frame_step.setRange(1, 100_000)
         self.custom_frame_step.setValue(23)
         self.custom_frame_step.setSuffix(" frames")
-        advanced_form.addWidget(QLabel("Frame Interval"), 0, 0)
-        advanced_form.addWidget(self.custom_frame_step, 0, 1)
+        advanced_form.addWidget(QLabel("Frame Interval"), 1, 0)
+        advanced_form.addWidget(self.custom_frame_step, 1, 1)
 
-        self.strictness_slider = QSlider(Qt.Orientation.Horizontal)
-        self.strictness_slider.setRange(0, 95)
-        self.strictness_slider.setValue(50)
-        self.strictness_slider.setTickInterval(5)
-        self.strictness_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.strictness_value = QLabel()
-        strictness_row = QHBoxLayout()
-        strictness_row.addWidget(QLabel("Detect more"))
-        strictness_row.addWidget(self.strictness_slider, 1)
-        strictness_row.addWidget(QLabel("Clear text only"))
-        advanced_form.addWidget(QLabel("Text Strictness"), 1, 0)
-        advanced_form.addLayout(strictness_row, 1, 1)
-        advanced_form.addWidget(self.strictness_value, 2, 1)
-        layout.addWidget(advanced_group)
+        self.breadth_slider = QSlider(Qt.Orientation.Horizontal)
+        self.breadth_slider.setRange(0, 100)
+        self.breadth_slider.setValue(50)
+        self.breadth_slider.setTickInterval(10)
+        self.breadth_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        breadth_row = QHBoxLayout()
+        breadth_row.addWidget(QLabel("Show more"))
+        breadth_row.addWidget(self.breadth_slider, 1)
+        breadth_row.addWidget(QLabel("Clear results"))
+        self.breadth_value = QLabel()
+        advanced_form.addWidget(QLabel("Review Breadth"), 2, 0)
+        advanced_form.addLayout(breadth_row, 2, 1)
+        advanced_form.addWidget(self.breadth_value, 3, 1)
+
+        self.scene_detection_check = QCheckBox("Use scene-change detection")
+        self.scene_detection_check.setChecked(True)
+        self.annotated_check = QCheckBox("Save annotated screenshots")
+        advanced_form.addWidget(self.scene_detection_check, 4, 1)
+        advanced_form.addWidget(self.annotated_check, 5, 1)
+        advanced_form.addWidget(QLabel("Output"), 6, 0)
+        self.output_label = QLabel(str(default_reports_root()))
+        advanced_form.addWidget(self.output_label, 6, 1)
+        self.advanced_group.setVisible(False)
+        layout.addWidget(self.advanced_group)
 
         self.mode_combo.currentIndexChanged.connect(self._sync_scan_mode_controls)
-        self.strictness_slider.valueChanged.connect(self._update_strictness_label)
+        self.breadth_slider.valueChanged.connect(self._update_breadth_label)
         self._sync_scan_mode_controls()
-        self._update_strictness_label(self.strictness_slider.value())
+        self._update_breadth_label(self.breadth_slider.value())
 
         self.progress = QProgressBar()
         self.progress.setRange(0, 1000)
@@ -197,7 +228,7 @@ class MainWindow(QMainWindow):
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self.cancel_scan)
-        self.open_output_button = QPushButton("Open Output Folder")
+        self.open_output_button = QPushButton("Open Report Folder")
         self.open_output_button.setEnabled(False)
         self.open_output_button.clicked.connect(self.open_output_folder)
         buttons.addWidget(self.open_output_button)
@@ -211,10 +242,11 @@ class MainWindow(QMainWindow):
             #dropFrame {
                 border: 2px dashed #9aa3ad;
                 border-radius: 8px;
-                min-height: 168px;
+                min-height: 142px;
                 background: rgba(120, 130, 140, 0.08);
             }
             #dropTitle { font-size: 22px; font-weight: 600; }
+            #captionLabel { color: #526274; }
             QPushButton { padding: 7px 14px; }
             """
         )
@@ -229,10 +261,36 @@ class MainWindow(QMainWindow):
         if filename:
             self.set_video_path(Path(filename))
 
+    def choose_caption(self) -> None:
+        start_dir = self.video_path.parent if self.video_path else Path.home()
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Choose English or Spanish Dialogue Captions",
+            str(start_dir),
+            "Caption Files (*.srt *.vtt)",
+        )
+        if filename:
+            self.set_caption_path(Path(filename), auto_detected=False)
+
     def set_video_path(self, path: Path) -> None:
         self.video_path = path
         self.file_label.setText(path.name)
-        self.status_label.setText("Ready to scan")
+        sidecar = find_sidecar_caption(path)
+        if sidecar:
+            self.set_caption_path(sidecar, auto_detected=True)
+            self.status_label.setText("Ready - matching captions found")
+        else:
+            self.clear_caption()
+            self.status_label.setText("Ready - uniform scan without captions")
+
+    def set_caption_path(self, path: Path, *, auto_detected: bool) -> None:
+        self.caption_path = path
+        suffix = " (automatic)" if auto_detected else ""
+        self.caption_label.setText(f"{path.name}{suffix}")
+
+    def clear_caption(self) -> None:
+        self.caption_path = None
+        self.caption_label.setText("No SRT or VTT selected")
 
     def start_scan(self) -> None:
         if self.video_path is None:
@@ -247,9 +305,13 @@ class MainWindow(QMainWindow):
         settings = ScanSettings(
             mode=str(self.mode_combo.currentData()),
             custom_frame_step=self.custom_frame_step.value(),
-            min_ocr_confidence=self.strictness_slider.value() / 100.0,
+            min_ocr_confidence=0.0,
+            review_breadth=self.breadth_slider.value() / 100.0,
             start_seconds=start_seconds,
             end_seconds=end_seconds,
+            caption_path=self.caption_path,
+            use_dialogue_optimization=self.dialogue_optimization_check.isChecked(),
+            enable_scene_detection=self.scene_detection_check.isChecked(),
             save_annotated_screenshots=self.annotated_check.isChecked(),
         )
         self.thread = ScanThread(self.video_path, settings)
@@ -261,7 +323,7 @@ class MainWindow(QMainWindow):
         self.cancel_button.setEnabled(True)
         self.open_output_button.setEnabled(False)
         self.progress.setValue(0)
-        self.status_label.setText("Initializing OCR...")
+        self.status_label.setText("Preparing scan...")
         self.thread.start()
 
     def cancel_scan(self) -> None:
@@ -272,16 +334,24 @@ class MainWindow(QMainWindow):
 
     def update_progress(self, progress: ScanProgress) -> None:
         self.progress.setValue(int(progress.fraction * 1000))
-        self.status_label.setText(
-            f"{progress.filename} - {format_timestamp(progress.current_seconds)} / "
-            f"{format_timestamp(progress.scan_end_seconds)} - "
-            f"{progress.detections_found} detections"
-        )
+        if progress.frames_processed:
+            detail = (
+                f"{format_timestamp(progress.current_seconds)} / "
+                f"{format_timestamp(progress.scan_end_seconds)} - "
+                f"{progress.detections_found} detections"
+            )
+        else:
+            detail = progress.filename
+        self.status_label.setText(f"{progress.phase} - {detail}")
 
     def scan_finished(self, result: object) -> None:
         self.output_dir = result.output_dir
+        counts = bucket_counts(result.events)
         self.progress.setValue(1000)
-        self.status_label.setText(f"Complete - {len(result.events)} text events detected")
+        self.status_label.setText(
+            f"Complete - {counts[LIKELY_FORCED_TEXT]} likely forced text, "
+            f"{counts[NEEDS_REVIEW]} to review"
+        )
         self.scan_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
         self.open_output_button.setEnabled(True)
@@ -301,17 +371,21 @@ class MainWindow(QMainWindow):
         if self.output_dir:
             subprocess.run(["open", str(self.output_dir)], check=False)
 
+    def _toggle_advanced(self, checked: bool) -> None:
+        self.advanced_group.setVisible(checked)
+        self.advanced_toggle.setText("Hide Advanced Settings" if checked else "Show Advanced Settings")
+
     def _sync_scan_mode_controls(self, _index: int = -1) -> None:
         self.custom_frame_step.setEnabled(self.mode_combo.currentData() == "custom")
 
-    def _update_strictness_label(self, value: int) -> None:
+    def _update_breadth_label(self, value: int) -> None:
         if value <= 25:
-            label = "More results"
+            label = "Broad review"
         elif value >= 75:
-            label = "Clear text only"
+            label = "Focused review"
         else:
             label = "Balanced"
-        self.strictness_value.setText(f"{label} - minimum confidence {value}%")
+        self.breadth_value.setText(label)
 
     @staticmethod
     def _optional_timestamp(value: str) -> float | None:

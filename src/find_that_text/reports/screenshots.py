@@ -1,11 +1,42 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 
 from PIL import Image, ImageDraw
 
 from find_that_text.tracking.events import OCRDetection, TextEvent
 from find_that_text.util.timestamps import format_timestamp
+
+
+def cache_candidate_frame(image_rgb: object, cache_dir: Path, frame_index: int) -> Path:
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path = cache_dir / f"frame_{frame_index:09d}.jpg"
+    Image.fromarray(image_rgb).save(path, quality=88)
+    return path
+
+
+def save_cached_event_screenshots(
+    events: list[TextEvent],
+    screenshots_dir: Path,
+    cached_frames: dict[int, Path],
+    *,
+    annotated: bool = False,
+) -> None:
+    for event in events:
+        best = event.best_detection
+        if best is None:
+            continue
+        cached_path = cached_frames.get(best.frame_index)
+        if cached_path is None or not cached_path.exists():
+            continue
+        with Image.open(cached_path) as image:
+            _save_event_image(event, image.convert("RGB"), screenshots_dir, annotated=annotated)
+
+
+def remove_candidate_cache(cache_dir: Path) -> None:
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir)
 
 
 def save_event_screenshots(

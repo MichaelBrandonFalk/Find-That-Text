@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--mode",
         choices=["default", "advanced", "custom", "standard", "fast", "thorough"],
         default="default",
-        help="default checks every 23 frames; advanced checks every frame.",
+        help="default uses adaptive time/scene sampling; advanced checks every frame.",
     )
     custom = scan.add_mutually_exclusive_group()
     custom.add_argument(
@@ -37,9 +37,18 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument(
         "--min-confidence",
         type=float,
-        default=0.5,
-        help="Keep OCR results at or above this confidence from 0.0 to 1.0.",
+        default=0.0,
+        help="Raw OCR audit floor from 0.0 to 1.0.",
     )
+    scan.add_argument(
+        "--review-breadth",
+        type=float,
+        default=0.5,
+        help="Result focus from 0.0 (broad) to 1.0 (focused).",
+    )
+    scan.add_argument("--captions", type=Path, default=None, help="Optional English or Spanish SRT/VTT dialogue captions.")
+    scan.add_argument("--no-dialogue-optimization", action="store_true")
+    scan.add_argument("--no-scene-detection", action="store_true")
     scan.add_argument("--start", type=parse_timestamp, default=None, help="Start timestamp, for example 00:00:00.")
     scan.add_argument("--end", type=parse_timestamp, default=None, help="End timestamp, for example 00:30:30.")
     scan.add_argument("--output", type=Path, default=None, help="Output root folder.")
@@ -63,8 +72,12 @@ def main(argv: list[str] | None = None) -> int:
             custom_frame_step=args.custom_frame_step,
             custom_interval_seconds=args.custom_interval,
             min_ocr_confidence=args.min_confidence,
+            review_breadth=args.review_breadth,
             start_seconds=args.start,
             end_seconds=args.end,
+            caption_path=args.captions,
+            use_dialogue_optimization=not args.no_dialogue_optimization,
+            enable_scene_detection=not args.no_scene_detection,
             output_root=args.output,
             save_annotated_screenshots=args.save_annotated_screenshots,
             ocr_backend=None if args.ocr_backend == "paddle" else args.ocr_backend,
@@ -97,6 +110,7 @@ def _print_progress(progress: ScanProgress) -> None:
     sys.stdout.write(
         "\r"
         f"{percent:5.1f}% "
+        f"{progress.phase}: "
         f"{format_timestamp(progress.current_seconds)} / {format_timestamp(progress.scan_end_seconds)} "
         f"frames={progress.frames_processed} detections={progress.detections_found}"
     )

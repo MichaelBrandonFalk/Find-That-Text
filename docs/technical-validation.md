@@ -19,13 +19,14 @@ This document records the first validation pass requested before committing to t
 
 ## Architecture Decision
 
-Use Python 3.13 on Apple Silicon, PySide6 for the GUI, PyAV for decoding, PaddleOCR with PaddlePaddle CPU as the default backend, and keep ONNX Runtime available as an alternate backend for packaging/performance comparison.
+Use Python 3.13 on Apple Silicon, PySide6 for the GUI, PyAV for decoding, PySceneDetect for adaptive scene sampling, and separate PP-OCRv6 small detector/recognizer modules on PaddlePaddle CPU.
 
 Reasons:
 
 - PaddlePaddle has current official macOS Apple Silicon CPU support.
-- PaddleOCR 3.7 provides PP-OCRv6 medium as the current default general OCR pipeline.
+- PP-OCRv6 small models retain strong detection/recognition accuracy while materially reducing feature-length CPU runtime.
 - PyAV exposes presentation timestamps directly and avoids OpenCV's more opaque video timestamp behavior.
+- Separate detector and recognizer modules expose detector scores and allow recognition crops to be batched.
 - PyInstaller onedir/windowed is better aligned with signed macOS app distribution than onefile.
 - PySide6 is mature enough for a normal Mac utility, provided LGPL obligations are preserved.
 
@@ -64,3 +65,18 @@ These are release gates. Do not claim release readiness until each item has a da
 - macOS GPU acceleration is not assumed. The official PaddlePaddle macOS path is CPU-only.
 - The initial implementation is conservative about filtering. It stores all OCR detections in raw JSON and groups events only for the human report.
 - Bundled model packaging has a local frozen-app proof, but the release still needs clean-account install/open testing before public distribution.
+
+## 2026-09-22 Adaptive Scan Validation
+
+- Unit tests: `26 passed`.
+- PP-OCRv6 small benchmark: one 1280x720 synthetic frame completed detection and recognition in about 0.37 seconds after model initialization.
+- Caption-aware integration fixture: SRT dialogue from `00:00:02` to `00:00:05` produced 0.5-second quiet sampling, 2-second dialogue sampling, and immediate samples at detected scene/gap boundaries.
+- Scene detection: PySceneDetect AdaptiveDetector found both synthetic hard cuts.
+- OCR integration: an eight-second 1280x720 video produced two grouped moments, `THE LAST TRAIN` and `MADRID 1945`, both ranked as Likely Forced Text with evidence screenshots.
+- Detector audit: CSV and raw JSON included measured detector confidences of approximately 0.88 and 0.91 for the fixture.
+- Screenshot cache: evidence images were written during OCR and the temporary candidate cache was removed without a second video decode.
+- Packaged app self-test: the frozen arm64 executable copied the bundled PP-OCRv6 small models into a clean cache and recognized `HELLOWORLD`.
+- Packaged artifacts: app bundle size is about 800 MB; DMG size is about 313 MB; only the 9.6 MB detector and 20 MB recognizer model directories are bundled.
+- DMG verification: `hdiutil verify` passed; SHA-256 is `fa038398ff58002ed2fbb091079a52f07d24f02ede83f1f4225c1a87fc769659`.
+- Signing status: the local public build is ad-hoc signed and not notarized.
+- Full-feature runtime and recall validation are still required on representative production material.

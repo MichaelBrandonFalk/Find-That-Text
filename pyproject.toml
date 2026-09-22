@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "find-that-text"
 dynamic = ["version"]
-description = "Find visible text anywhere in a video and generate timestamped local OCR reports."
+description = "Find and rank screen-text moments that may need forced captions."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 license = { text = "MIT" }
 authors = [{ name = "Find That Text Contributors" }]
-keywords = ["ocr", "video", "video-ocr", "paddleocr", "macos", "apple-silicon"]
+keywords = ["ocr", "video", "forced-text", "subtitles", "paddleocr", "macos", "apple-silicon"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: MacOS X",
@@ -29,6 +29,7 @@ dependencies = [
   "paddlepaddle==3.3.0",
   "PySide6==6.11.2",
   "rapidfuzz>=3.13,<4",
+  "scenedetect==0.7.1",
 ]
 
 [project.optional-dependencies]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterable, Iterator
 
 import numpy as np
 
@@ -23,6 +23,9 @@ def iter_sampled_frames(
     frame_step: int | None = None,
     start_seconds: float = 0.0,
     end_seconds: float | None = None,
+    priority_timestamps: Iterable[float] | None = None,
+    interval_selector: Callable[[float], float] | None = None,
+    max_dimension: int | None = None,
 ) -> Iterator[FrameSample]:
     try:
         import av
@@ -37,6 +40,12 @@ def iter_sampled_frames(
         raise ValueError("interval_seconds must be greater than zero.")
 
     next_sample_time = max(0.0, start_seconds)
+    priority_times = sorted(
+        timestamp
+        for timestamp in (priority_timestamps or [])
+        if timestamp >= start_seconds and (end_seconds is None or timestamp <= end_seconds)
+    )
+    priority_index = 0
     decoded_index = -1
     range_frame_index = 0
     with av.open(str(path)) as container:
@@ -55,23 +64,43 @@ def iter_sampled_frames(
                 continue
             if end_seconds is not None and timestamp > end_seconds:
                 break
+            priority_due = (
+                priority_index < len(priority_times)
+                and timestamp + 1e-6 >= priority_times[priority_index]
+            )
             if frame_step is not None:
-                should_sample = range_frame_index % frame_step == 0
+                regular_due = range_frame_index % frame_step == 0
                 range_frame_index += 1
-                if not should_sample:
+                if not regular_due and not priority_due:
                     continue
             elif interval_seconds is not None:
-                if timestamp + 1e-6 < next_sample_time:
+                regular_due = timestamp + 1e-6 >= next_sample_time
+                if not regular_due and not priority_due:
                     continue
 
-            image = frame.to_ndarray(format="rgb24")
+            while priority_index < len(priority_times) and priority_times[priority_index] <= timestamp + 1e-6:
+                priority_index += 1
+
+            converted_frame = frame
+            if max_dimension and max(frame.width, frame.height) > max_dimension:
+                scale = max_dimension / max(frame.width, frame.height)
+                converted_frame = frame.reformat(
+                    width=max(1, round(frame.width * scale)),
+                    height=max(1, round(frame.height * scale)),
+                    format="rgb24",
+                )
+            image = converted_frame.to_ndarray(format="rgb24")
             yield FrameSample(
                 index=decoded_index,
                 timestamp_seconds=float(timestamp),
-                width=int(frame.width),
-                height=int(frame.height),
+                width=int(image.shape[1]),
+                height=int(image.shape[0]),
                 image_rgb=image,
             )
-            if interval_seconds is not None:
-                while next_sample_time <= timestamp + 1e-6:
-                    next_sample_time += interval_seconds
+            if interval_seconds is not None and regular_due:
+                selected_interval = (
+                    interval_selector(float(timestamp)) if interval_selector else interval_seconds
+                )
+                if selected_interval <= 0:
+                    raise ValueError("Adaptive sample interval must be greater than zero.")
+                next_sample_time = float(timestamp) + selected_interval

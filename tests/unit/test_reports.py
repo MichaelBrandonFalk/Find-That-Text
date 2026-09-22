@@ -59,6 +59,10 @@ def test_reports_write_expected_files(tmp_path: Path) -> None:
     html = (tmp_path / "report.html").read_text(encoding="utf-8")
     raw_json = (tmp_path / "raw_detections.json").read_text(encoding="utf-8")
     assert "HELLO WORLD" in html
+    assert "Likely Forced Text" in html
+    assert "Needs Review" in html
+    assert "Background / Credits / Repeated Graphics" in html
     assert "Minimum confidence 75%" in html
     assert '"detections"' in raw_json
     assert '"minimum_ocr_confidence": 0.75' in raw_json
+    assert '"schema_version": 2' in raw_json

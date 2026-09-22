@@ -51,3 +51,9 @@ This file summarizes the notable third-party components selected for the initial
 - Project: https://github.com/rapidfuzz/RapidFuzz
 - License: MIT
 - Use: OCR text similarity for temporal tracking.
+
+## PySceneDetect
+
+- Project: https://github.com/Breakthrough/PySceneDetect
+- License: BSD-3-Clause
+- Use: Adaptive scene-cut and fade detection for priority sampling.

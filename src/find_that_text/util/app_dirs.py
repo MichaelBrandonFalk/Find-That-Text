@@ -37,9 +37,13 @@ def install_bundled_paddlex_models(cache_dir: Path) -> None:
         return
     destination = cache_dir / "official_models"
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
-        return
-    shutil.copytree(source, destination)
+    destination.mkdir(parents=True, exist_ok=True)
+    for model_dir in source.iterdir():
+        if not model_dir.is_dir():
+            continue
+        model_destination = destination / model_dir.name
+        if not model_destination.exists():
+            shutil.copytree(model_dir, model_destination)
 
 
 def bundled_paddlex_dir() -> Path:

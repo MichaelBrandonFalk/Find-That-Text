@@ -20,9 +20,15 @@ def write_raw_json(
     scan_start_seconds: float = 0.0,
     scan_end_seconds: float | None = None,
     min_ocr_confidence: float = 0.0,
+    review_breadth: float = 0.5,
+    caption_path: Path | None = None,
+    dialogue_optimization: bool = False,
+    scene_detection: bool = False,
+    scene_change_times: list[float] | None = None,
 ) -> None:
+    detection_indexes = {id(detection): index for index, detection in enumerate(detections)}
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "application": "Find That Text",
         "application_version": __version__,
         "source": {
@@ -40,7 +46,12 @@ def write_raw_json(
             "start_seconds": round(scan_start_seconds, 3),
             "end_seconds": round(scan_end_seconds, 3) if scan_end_seconds is not None else None,
             "minimum_ocr_confidence": round(min_ocr_confidence, 3),
+            "review_breadth": round(review_breadth, 3),
             "ocr_model": ocr_model,
+            "caption_filename": caption_path.name if caption_path else None,
+            "dialogue_optimization": dialogue_optimization,
+            "scene_detection": scene_detection,
+            "scene_change_times": [round(value, 3) for value in (scene_change_times or [])],
         },
         "events": [
             {
@@ -49,7 +60,19 @@ def write_raw_json(
                 "end_seconds": round(event.end_seconds, 3),
                 "text": event.text,
                 "classification": event.classification,
-                "detection_indexes": [detections.index(detection) for detection in event.detections],
+                "relevance_score": round(event.relevance_score, 3),
+                "review_bucket": event.review_bucket,
+                "relevance_reasons": event.relevance_reasons,
+                "dialogue_free_ratio": (
+                    round(event.dialogue_free_ratio, 3)
+                    if event.dialogue_free_ratio is not None
+                    else None
+                ),
+                "near_scene_change": event.near_scene_change,
+                "title_like": event.title_like,
+                "credit_sequence": event.credit_sequence,
+                "repeated_graphic": event.repeated_graphic,
+                "detection_indexes": [detection_indexes[id(detection)] for detection in event.detections],
             }
             for event in events
         ],

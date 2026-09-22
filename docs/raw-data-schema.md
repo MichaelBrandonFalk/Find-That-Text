@@ -1,14 +1,14 @@
 # Raw Detection JSON Schema
 
-`raw_detections.json` stores an audit trail of every OCR detection used to create the grouped report.
+`raw_detections.json` schema version 2 stores an audit trail of every OCR detection used to create the grouped report.
 
 Top-level fields:
 
 - `schema_version`: integer schema version.
 - `application` and `application_version`: generator metadata.
 - `source`: filename, duration, resolution, codec, and frame-rate metadata.
-- `scan`: scan mode, frame step or legacy interval, optional start/end range, minimum OCR confidence, and OCR model/backend description.
-- `events`: grouped event summaries with references to raw detection indexes.
+- `scan`: scan mode, interval, range, review breadth, caption filename, dialogue optimization, scene-change times, and OCR model/backend description.
+- `events`: grouped moment summaries with relevance score, review bucket, scoring reasons, dialogue-gap ratio, classification flags, and references to raw detection indexes.
 - `detections`: all raw OCR detections.
 
 Each detection contains:
@@ -17,6 +17,7 @@ Each detection contains:
 - `timestamp` formatted as `HH:MM:SS.mmm`
 - `text`
 - `confidence`
+- `detector_confidence`
 - `polygon`
 - `box` with `x`, `y`, `width`, `height`
 - `frame_width`
