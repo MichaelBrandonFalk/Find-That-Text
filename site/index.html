@@ -11,7 +11,7 @@
   <header class="hero">
     <nav>
       <strong>Find That Text</strong>
-      <span>v1.3.0</span>
+      <span>v1.4.0</span>
     </nav>
     <section class="hero-content">
       <p class="kicker">Forced text review for Apple Silicon</p>
@@ -39,7 +39,7 @@
         <li><strong>Try a short range first if you like.</strong> Set an end time around ten minutes to check results, then clear it for the full scan. A late range jumps to that point instead of decoding from the start.</li>
         <li><strong>Review the strongest matches first.</strong> Open the report's Likely Forced Text section, then Needs Review. Background graphics and credits stay available, but out of your way.</li>
       </ol>
-      <p class="workflow-note">Without captions, Fastest checks the full video every 23 frames. Gap-only scanning can miss text shown during speech; turn it off for broader coverage, or choose Adaptive, a custom interval, or scene detection for a closer rescan. Scanning a two-hour feature in two hours or less is a target, not a guarantee.</p>
+      <p class="workflow-note">Without captions, Fastest checks the full video every 23 frames. Nearly identical sampled frames may reuse an OCR result, with regular fresh checks. Gap-only scanning can miss text shown during speech; turn it off for broader coverage, or choose Adaptive, a custom interval, or scene detection for a closer rescan. Scanning a two-hour feature in two hours or less is a target, not a guarantee.</p>
     </section>
     <section class="outputs">
       <div>
@@ -56,6 +56,16 @@
       <p class="section-label">Before or after dialogue captions</p>
       <h2>Captions help, but they are never required.</h2>
       <p>Use an English or Spanish SRT/VTT dialogue file for the fastest gap-only scan, or scan the full video at the same 23-frame interval before the rest of the localization workflow begins.</p>
+    </section>
+    <section class="technology">
+      <p class="section-label">Under the hood</p>
+      <h2>What powers Find That Text</h2>
+      <ul class="technology-list">
+        <li><strong>Video</strong><a href="https://ffmpeg.org/">FFmpeg</a> via <a href="https://github.com/PyAV-Org/PyAV">PyAV 18.1.0</a></li>
+        <li><strong>OCR</strong><a href="https://github.com/PaddlePaddle/PaddleOCR">PaddleOCR 3.7.0</a> with PP-OCRv6 small models</li>
+        <li><strong>Optional scene detection</strong><a href="https://github.com/Breakthrough/PySceneDetect">PySceneDetect 0.7.1</a></li>
+        <li><strong>Mac interface</strong><a href="https://doc.qt.io/qtforpython-6/">PySide6 6.11.2</a></li>
+      </ul>
     </section>
     <section class="install">
       <h2>Private by default</h2>

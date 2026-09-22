@@ -35,6 +35,7 @@ Fastest mode is the default:
 - Check every 23rd source frame and send only those frames to OCR
 - With dialogue captions, OCR only sampled frames outside captioned dialogue (including a 0.15-second margin)
 - With no captions, scan sampled frames across the full video
+- Reuse OCR results on near-identical sampled frames, with a fresh OCR pass after at most two reuses
 - Skip the full-video scene-change prepass
 - PP-OCRv6 small detection and recognition models on frames capped at 1280 pixels
 - Detector confidence, OCR confidence, temporal confirmation, text shape, screen size and position, dialogue gaps, repeated graphics, and credit-density scoring
@@ -42,6 +43,8 @@ Fastest mode is the default:
 Nothing is removed solely because it receives a low relevance score. Every grouped event is included in one of three report sections, and the raw JSON preserves the underlying detections.
 
 Gap-only scanning can miss plot text shown while people speak, and sampling can miss very brief text. For broader coverage, turn off the gap-only checkbox, use Adaptive or a smaller custom frame interval, and optionally enable scene-change detection. Every-frame mode is intended for short ranges because a feature-length scan can take much longer. These controls can be changed separately. If you clear an automatically selected caption file, it will not be silently reselected for that scan.
+
+OCR reuse is intentionally conservative: meaningful local pixel changes trigger a fresh OCR pass, and every third near-identical sample is refreshed. It is disabled in every-frame mode and when UHD tiling is enabled. The report shows analyzed and reused frame counts. Moving scenes may not benefit, so this is a speed aid rather than a guaranteed time reduction.
 
 ## Reports
 
@@ -91,10 +94,18 @@ find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.en.srt"
 find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.es.vtt" --start 00:00:00 --end 00:30:30
 find-that-text scan "/path/to/movie.mov" --scan-during-dialogue
 find-that-text scan "/path/to/movie.mov" --mode adaptive --scene-detection
+find-that-text scan "/path/to/movie.mov" --no-ocr-reuse
 find-that-text scan "/path/to/movie.mov" --mode custom --custom-frame-step 7 --review-breadth 0.35
 ```
 
 Release builds bundle the PP-OCRv6 small models. On first launch, the app copies those models into `~/Library/Application Support/Find That Text/PaddleX`; normal scans do not need internet access.
+
+## Core Technology
+
+- Video decoding: [FFmpeg](https://ffmpeg.org/) through [PyAV 18.1.0](https://github.com/PyAV-Org/PyAV)
+- OCR: [PaddleOCR 3.7.0](https://github.com/PaddlePaddle/PaddleOCR) with PP-OCRv6 small detection and recognition models
+- Optional scene-change detection: [PySceneDetect 0.7.1](https://github.com/Breakthrough/PySceneDetect)
+- Mac interface: [PySide6 6.11.2](https://doc.qt.io/qtforpython-6/)
 
 ## Packaging
 

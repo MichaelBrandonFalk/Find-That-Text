@@ -9,6 +9,7 @@ from typing import Callable, Iterable
 
 from find_that_text.captions import CaptionTimeline, find_sidecar_caption
 from find_that_text.ocr.engine import OCREngine, OCRTextObservation, PaddleOCREngine
+from find_that_text.ocr.reuse import OCRReuseCache
 from find_that_text.ocr.tiling import recognize_with_optional_tiling
 from find_that_text.reports.csv_report import write_csv_report
 from find_that_text.reports.html_report import write_html_report
@@ -50,6 +51,7 @@ class ScanSettings:
     only_dialogue_gaps: bool = True
     use_dialogue_optimization: bool = True
     enable_scene_detection: bool = False
+    reuse_unchanged_frames: bool = True
     quiet_interval_seconds: float = 0.5
     dialogue_interval_seconds: float = 2.0
     max_ocr_dimension: int = 1280
@@ -172,6 +174,8 @@ def scan_video(
     detections: list[OCRDetection] = []
     source_filename = Path(video_path).name
     tiling_enabled = _should_tile(settings, metadata, scan_mode)
+    reuse_active = settings.reuse_unchanged_frames and scan_mode.frame_step != 1 and not tiling_enabled
+    reuse_cache = OCRReuseCache() if reuse_active else None
     processed_samples = 0
     cached_frames: dict[int, Path] = {}
     candidate_cache_dir = output_dir / ".candidate_frames"
@@ -233,11 +237,21 @@ def scan_video(
             raise ScanCancelled("Scan cancelled.")
 
         processed_samples += 1
-        observations = recognize_with_optional_tiling(
-            ocr_engine,
-            sample.image_rgb,
-            enable_tiling=tiling_enabled,
-        )
+        if reuse_cache is not None:
+            observations = reuse_cache.recognize(
+                sample.image_rgb,
+                lambda image: recognize_with_optional_tiling(
+                    ocr_engine,
+                    image,
+                    enable_tiling=False,
+                ),
+            )
+        else:
+            observations = recognize_with_optional_tiling(
+                ocr_engine,
+                sample.image_rgb,
+                enable_tiling=tiling_enabled,
+            )
         kept_observations = filter_ocr_observations(observations, min_ocr_confidence)
         if kept_observations:
             cached_frames[sample.index] = cache_candidate_frame(
@@ -324,6 +338,8 @@ def scan_video(
         ),
         dialogue_gaps_only=dialogue_gaps_only_active,
         scene_detection=scene_detection_active,
+        ocr_frames=reuse_cache.ocr_frames if reuse_cache is not None else processed_samples,
+        reused_frames=reuse_cache.reused_frames if reuse_cache is not None else 0,
     )
     write_raw_json(
         raw_json,
@@ -343,6 +359,8 @@ def scan_video(
         dialogue_gaps_only=dialogue_gaps_only_active,
         scene_detection=scene_detection_active,
         scene_change_times=scene_change_times,
+        ocr_frames=reuse_cache.ocr_frames if reuse_cache is not None else processed_samples,
+        reused_frames=reuse_cache.reused_frames if reuse_cache is not None else 0,
     )
 
     LOGGER.info("Scan complete events=%d detections=%d output=%s", len(events), len(detections), output_dir)

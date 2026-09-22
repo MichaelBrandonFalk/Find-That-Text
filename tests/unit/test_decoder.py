@@ -15,7 +15,7 @@ from find_that_text.ocr.engine import EmptyOCREngine
 from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, scan_video
 
 
-def _make_video(path: Path, *, seconds: int = 4, fps: int = 24) -> None:
+def _make_video(path: Path, *, seconds: int = 4, fps: int = 24, static: bool = False) -> None:
     with av.open(str(path), "w") as container:
         stream = container.add_stream("mpeg4", rate=fps)
         stream.width = 64
@@ -23,7 +23,7 @@ def _make_video(path: Path, *, seconds: int = 4, fps: int = 24) -> None:
         stream.pix_fmt = "yuv420p"
         stream.time_base = Fraction(1, fps)
         for index in range(seconds * fps):
-            image = np.full((48, 64, 3), index % 256, dtype=np.uint8)
+            image = np.full((48, 64, 3), 40 if static else index % 256, dtype=np.uint8)
             frame = av.VideoFrame.from_ndarray(image, format="rgb24")
             frame.pts = index
             for packet in stream.encode(frame):
@@ -128,3 +128,20 @@ def test_gap_only_scan_reports_progress_and_can_cancel_without_samples(tmp_path:
 
     assert progress[-1].frames_processed == 0
     assert progress[-1].current_seconds >= 5.0
+
+
+def test_static_sampled_frames_reuse_ocr_without_changing_sample_count(tmp_path: Path) -> None:
+    video = tmp_path / "static.mp4"
+    _make_video(video, static=True)
+    progress = []
+    result = scan_video(
+        video,
+        settings=ScanSettings(output_root=tmp_path / "reports", auto_find_captions=False),
+        engine=EmptyOCREngine(),
+        progress_callback=progress.append,
+    )
+    scan = json.loads(result.raw_json.read_text(encoding="utf-8"))["scan"]
+
+    assert progress[-1].frames_processed == 5
+    assert scan["ocr_frames_analyzed"] == 2
+    assert scan["ocr_frames_reused"] == 3

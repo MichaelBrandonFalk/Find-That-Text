@@ -50,6 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--no-auto-captions", action="store_true", help="Do not find a matching SRT/VTT sidecar automatically.")
     scan.add_argument("--scan-during-dialogue", action="store_true", help="Scan sampled frames even during captioned dialogue.")
     scan.add_argument("--no-dialogue-optimization", action="store_true", help="Disable gap-aware cadence in adaptive mode.")
+    scan.add_argument("--no-ocr-reuse", action="store_true", help="Run OCR on every sampled frame, even when nearly identical.")
     scene = scan.add_mutually_exclusive_group()
     scene.add_argument("--scene-detection", dest="scene_detection", action="store_true", help="Also check scene cuts (adds a full-video pass).")
     scene.add_argument("--no-scene-detection", dest="scene_detection", action="store_false", help="Skip scene detection (default).")
@@ -85,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
             only_dialogue_gaps=not args.scan_during_dialogue,
             use_dialogue_optimization=not args.no_dialogue_optimization,
             enable_scene_detection=args.scene_detection,
+            reuse_unchanged_frames=not args.no_ocr_reuse,
             output_root=args.output,
             save_annotated_screenshots=args.save_annotated_screenshots,
             ocr_backend=None if args.ocr_backend == "paddle" else args.ocr_backend,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0
+
+- Added conservative OCR result reuse for near-identical sampled frames, with periodic fresh checks and a disable switch.
+- Included analyzed/reused OCR frame counts in scan reports and raw JSON.
+- Labeled the app and website with linked, versioned video, OCR, scene-detection, and interface components.
+
 ## 1.3.0
 
 - Made the fastest scan the default: every 23rd frame, only outside captioned dialogue when SRT/VTT captions are available.

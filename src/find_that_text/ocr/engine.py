@@ -27,6 +27,7 @@ class OCREngine(Protocol):
 
 class PaddleOCREngine:
     name = "PaddleOCR"
+    version = "3.7.0"
 
     DEFAULT_DETECTION_MODEL = "PP-OCRv6_small_det"
     DEFAULT_RECOGNITION_MODEL = "PP-OCRv6_small_rec"
@@ -66,7 +67,8 @@ class PaddleOCREngine:
         self.text_det_box_thresh = text_det_box_thresh
         self.text_rec_score_thresh = text_rec_score_thresh
         self.model_description = (
-            f"det={detection_model}, rec={recognition_model}, engine={self.backend}"
+            f"PaddleOCR {self.version}: det={detection_model}, rec={recognition_model}, "
+            f"engine={self.backend}"
         )
 
     def recognize(self, image_rgb: np.ndarray) -> list[OCRTextObservation]:

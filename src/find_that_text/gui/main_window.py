@@ -4,7 +4,7 @@ import subprocess
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QProgressBar,
+    QScrollArea,
     QSlider,
     QSpinBox,
     QVBoxLayout,
@@ -28,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from find_that_text.captions import find_sidecar_caption
+from find_that_text.ocr.engine import PaddleOCREngine
 from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, scan_video
 from find_that_text.tracking.relevance import LIKELY_FORCED_TEXT, NEEDS_REVIEW, bucket_counts
 from find_that_text.util.paths import default_reports_root
@@ -99,7 +101,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Find That Text")
-        self.resize(780, 780)
+        self.resize(780, 820)
         self.video_path: Path | None = None
         self.caption_path: Path | None = None
         self.auto_find_captions = True
@@ -110,7 +112,17 @@ class MainWindow(QMainWindow):
     def _build_ui(self) -> None:
         root = QWidget()
         self.setCentralWidget(root)
-        layout = QVBoxLayout(root)
+        outer_layout = QVBoxLayout(root)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+        scroll = QScrollArea()
+        self.scroll_area = scroll
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        scroll.setWidget(content)
+        outer_layout.addWidget(scroll, 1)
+        layout = QVBoxLayout(content)
         layout.setContentsMargins(28, 24, 28, 24)
         layout.setSpacing(16)
 
@@ -204,12 +216,16 @@ class MainWindow(QMainWindow):
         self.scene_detection_check = QCheckBox("Use scene-change detection")
         self.scene_detection_check.setChecked(False)
         self.scene_detection_check.setToolTip("Adds a full-video scene pass before OCR; useful for brief text at cuts.")
+        self.reuse_check = QCheckBox("Reuse OCR on near-identical frames")
+        self.reuse_check.setChecked(True)
+        self.reuse_check.setToolTip("Skips repeat OCR only when sampled frames barely change; every third frame is refreshed.")
         self.annotated_check = QCheckBox("Save annotated screenshots")
         advanced_form.addWidget(self.scene_detection_check, 4, 1)
-        advanced_form.addWidget(self.annotated_check, 5, 1)
-        advanced_form.addWidget(QLabel("Output"), 6, 0)
+        advanced_form.addWidget(self.reuse_check, 5, 1)
+        advanced_form.addWidget(self.annotated_check, 6, 1)
+        advanced_form.addWidget(QLabel("Output"), 7, 0)
         self.output_label = QLabel(str(default_reports_root()))
-        advanced_form.addWidget(self.output_label, 6, 1)
+        advanced_form.addWidget(self.output_label, 7, 1)
         self.advanced_group.setVisible(False)
         layout.addWidget(self.advanced_group)
 
@@ -222,8 +238,12 @@ class MainWindow(QMainWindow):
         self.progress.setRange(0, 1000)
         self.progress.setValue(0)
         self.status_label = QLabel("Ready")
-        layout.addWidget(self.status_label)
-        layout.addWidget(self.progress)
+        controls = QWidget()
+        controls_layout = QVBoxLayout(controls)
+        controls_layout.setContentsMargins(28, 12, 28, 16)
+        controls_layout.setSpacing(12)
+        controls_layout.addWidget(self.status_label)
+        controls_layout.addWidget(self.progress)
 
         buttons = QHBoxLayout()
         buttons.addStretch(1)
@@ -238,7 +258,22 @@ class MainWindow(QMainWindow):
         buttons.addWidget(self.open_output_button)
         buttons.addWidget(self.cancel_button)
         buttons.addWidget(self.scan_button)
-        layout.addLayout(buttons)
+        controls_layout.addLayout(buttons)
+        outer_layout.addWidget(controls)
+
+        technology_label = QLabel(
+            'Video: <a href="https://ffmpeg.org/">FFmpeg</a> via '
+            '<a href="https://github.com/PyAV-Org/PyAV">PyAV 18.1.0</a> | '
+            'OCR: <a href="https://github.com/PaddlePaddle/PaddleOCR">'
+            f'PaddleOCR {PaddleOCREngine.version}</a> '
+            '(PP-OCRv6 small)<br>'
+            'Optional scene detection: '
+            '<a href="https://github.com/Breakthrough/PySceneDetect">PySceneDetect 0.7.1</a>'
+        )
+        technology_label.setObjectName("technologyCredits")
+        technology_label.setOpenExternalLinks(True)
+        technology_label.setTextFormat(Qt.TextFormat.RichText)
+        self.statusBar().addWidget(technology_label, 1)
 
         self.setStyleSheet(
             """
@@ -251,6 +286,7 @@ class MainWindow(QMainWindow):
             }
             #dropTitle { font-size: 22px; font-weight: 600; }
             #captionLabel { color: #526274; }
+            #technologyCredits { color: #526274; font-size: 11px; }
             QPushButton { padding: 7px 14px; }
             """
         )
@@ -323,6 +359,7 @@ class MainWindow(QMainWindow):
             auto_find_captions=self.auto_find_captions,
             only_dialogue_gaps=self.gap_only_check.isChecked(),
             enable_scene_detection=self.scene_detection_check.isChecked(),
+            reuse_unchanged_frames=self.reuse_check.isChecked(),
             save_annotated_screenshots=self.annotated_check.isChecked(),
         )
         self.thread = ScanThread(self.video_path, settings)
@@ -385,9 +422,12 @@ class MainWindow(QMainWindow):
     def _toggle_advanced(self, checked: bool) -> None:
         self.advanced_group.setVisible(checked)
         self.advanced_toggle.setText("Hide Advanced Settings" if checked else "Show Advanced Settings")
+        if checked:
+            QTimer.singleShot(0, lambda: self.scroll_area.ensureWidgetVisible(self.advanced_group))
 
     def _sync_scan_mode_controls(self, _index: int = -1) -> None:
         self.custom_frame_step.setEnabled(self.mode_combo.currentData() == "custom")
+        self.reuse_check.setEnabled(self.mode_combo.currentData() != "advanced")
 
     def _update_breadth_label(self, value: int) -> None:
         if value <= 25:

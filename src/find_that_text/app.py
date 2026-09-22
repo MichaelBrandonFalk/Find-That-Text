@@ -16,17 +16,17 @@ def main() -> int:
         import paddleocr
         import PySide6
 
+        from find_that_text.ocr.engine import PaddleOCREngine
+
         print(f"Find That Text {__version__}")
         print(f"paddle {paddle.__version__}")
-        print(f"paddleocr {getattr(paddleocr, '__version__', 'unknown')}")
+        print(f"paddleocr {PaddleOCREngine.version}")
         print(f"av {av.__version__}")
         print(f"onnxruntime {onnxruntime.__version__}")
         print(f"pyside6 {PySide6.__version__}")
         if "--self-test-ocr" in sys.argv:
             import numpy as np
             from PIL import Image, ImageDraw
-
-            from find_that_text.ocr.engine import PaddleOCREngine
 
             image = Image.new("RGB", (640, 360), (20, 24, 32))
             draw = ImageDraw.Draw(image)

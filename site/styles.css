@@ -135,6 +135,7 @@ main {
 .workflow,
 .outputs,
 .privacy,
+.technology,
 .install {
   padding: 68px max(28px, calc((100vw - 1180px) / 2));
 }
@@ -226,6 +227,30 @@ main {
   letter-spacing: 0;
 }
 
+.technology {
+  background: var(--lavender);
+}
+
+.technology-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 40px;
+  list-style: none;
+  margin: 26px 0 0;
+  padding: 0;
+}
+
+.technology-list li {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  color: var(--muted);
+}
+
+.technology-list strong {
+  display: block;
+  color: var(--ink);
+}
+
 .install {
   background: var(--cream);
 }
@@ -290,6 +315,7 @@ main a {
   .workflow,
   .outputs,
   .privacy,
+  .technology,
   .install {
     padding: 52px 24px;
   }
@@ -298,6 +324,10 @@ main a {
   .outputs {
     grid-template-columns: 1fr;
     gap: 30px;
+  }
+
+  .technology-list {
+    grid-template-columns: 1fr;
   }
 
   footer {

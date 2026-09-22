@@ -26,6 +26,8 @@ def write_raw_json(
     dialogue_gaps_only: bool = False,
     scene_detection: bool = False,
     scene_change_times: list[float] | None = None,
+    ocr_frames: int = 0,
+    reused_frames: int = 0,
 ) -> None:
     detection_indexes = {id(detection): index for index, detection in enumerate(detections)}
     payload = {
@@ -54,6 +56,8 @@ def write_raw_json(
             "dialogue_gaps_only": dialogue_gaps_only,
             "scene_detection": scene_detection,
             "scene_change_times": [round(value, 3) for value in (scene_change_times or [])],
+            "ocr_frames_analyzed": ocr_frames,
+            "ocr_frames_reused": reused_frames,
         },
         "events": [
             {

@@ -32,6 +32,8 @@ def write_html_report(
     dialogue_optimization: bool = False,
     dialogue_gaps_only: bool = False,
     scene_detection: bool = False,
+    ocr_frames: int = 0,
+    reused_frames: int = 0,
 ) -> None:
     scan_end = scan_end_seconds if scan_end_seconds is not None else metadata.duration_seconds
     counts = bucket_counts(events)
@@ -102,6 +104,7 @@ def write_html_report(
       <div><strong>Scene Detection</strong><br>{"On" if scene_detection else "Off"}</div>
       <div><strong>Review Breadth</strong><br>{review_breadth:.0%}</div>
       <div><strong>OCR Model</strong><br>{escape(ocr_model)}</div>
+      <div><strong>OCR Work</strong><br>{ocr_frames} frames analyzed, {reused_frames} reused</div>
       <div><strong>Text Strictness</strong><br>Minimum confidence {min_ocr_confidence:.0%}</div>
       <div><strong>Application Version</strong><br>{escape(__version__)}</div>
       <div><strong>Scan Date</strong><br>{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</div>
