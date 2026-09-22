@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+- Made the fastest scan the default: every 23rd frame, only outside captioned dialogue when SRT/VTT captions are available.
+- Separated dialogue-gap filtering from frame cadence; full-video, adaptive, custom interval, every-frame, and scene-change options remain available.
+- Skipped RGB conversion for filtered or unsampled frames and seeked to the start of a selected late-video range.
+- Made caption clearing persistent for a scan and updated the app and website to explain the speed/coverage tradeoff.
+
 ## 1.2.0
 
 - Added optional English or Spanish SRT/VTT dialogue timelines with default-on dialogue-gap optimization.

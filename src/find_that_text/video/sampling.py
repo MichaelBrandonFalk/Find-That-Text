@@ -5,6 +5,7 @@ from fractions import Fraction
 
 
 SCAN_MODE_FRAME_STEPS = {
+    "default": 23,
     "advanced": 1,
 }
 
@@ -38,8 +39,10 @@ def resolve_scan_mode(
     custom_interval_seconds: float | None = None,
 ) -> ScanMode:
     key = mode.lower().strip()
-    if key in {"default", "standard"}:
-        return ScanMode("default", interval_seconds=1.0)
+    if key == "default":
+        return ScanMode("default", frame_step=SCAN_MODE_FRAME_STEPS["default"])
+    if key in {"adaptive", "standard"}:
+        return ScanMode("adaptive", interval_seconds=1.0)
     if key in {"advanced", "every-frame", "every_frame", "thorough"}:
         return ScanMode("advanced", frame_step=SCAN_MODE_FRAME_STEPS["advanced"])
     if key == "custom":

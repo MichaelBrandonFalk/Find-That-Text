@@ -25,6 +25,8 @@ def iter_sampled_frames(
     end_seconds: float | None = None,
     priority_timestamps: Iterable[float] | None = None,
     interval_selector: Callable[[float], float] | None = None,
+    sample_filter: Callable[[float], bool] | None = None,
+    decoded_frame_callback: Callable[[float], None] | None = None,
     max_dimension: int | None = None,
 ) -> Iterator[FrameSample]:
     try:
@@ -53,6 +55,9 @@ def iter_sampled_frames(
         if not streams:
             raise ValueError(f"No video stream found in {path}")
         stream = streams[0]
+        if start_seconds > 0:
+            seek_offset = int(start_seconds / stream.time_base)
+            container.seek(seek_offset, backward=True, stream=stream)
         for frame in container.decode(stream):
             decoded_index += 1
             timestamp = frame.time
@@ -64,6 +69,8 @@ def iter_sampled_frames(
                 continue
             if end_seconds is not None and timestamp > end_seconds:
                 break
+            if decoded_frame_callback is not None:
+                decoded_frame_callback(float(timestamp))
             priority_due = (
                 priority_index < len(priority_times)
                 and timestamp + 1e-6 >= priority_times[priority_index]
@@ -81,6 +88,17 @@ def iter_sampled_frames(
             while priority_index < len(priority_times) and priority_times[priority_index] <= timestamp + 1e-6:
                 priority_index += 1
 
+            if interval_seconds is not None and regular_due:
+                selected_interval = (
+                    interval_selector(float(timestamp)) if interval_selector else interval_seconds
+                )
+                if selected_interval <= 0:
+                    raise ValueError("Adaptive sample interval must be greater than zero.")
+                next_sample_time = float(timestamp) + selected_interval
+
+            if sample_filter is not None and not sample_filter(float(timestamp)):
+                continue
+
             converted_frame = frame
             if max_dimension and max(frame.width, frame.height) > max_dimension:
                 scale = max_dimension / max(frame.width, frame.height)
@@ -97,10 +115,3 @@ def iter_sampled_frames(
                 height=int(image.shape[0]),
                 image_rgb=image,
             )
-            if interval_seconds is not None and regular_due:
-                selected_interval = (
-                    interval_selector(float(timestamp)) if interval_selector else interval_seconds
-                )
-                if selected_interval <= 0:
-                    raise ValueError("Adaptive sample interval must be greater than zero.")
-                next_sample_time = float(timestamp) + selected_interval

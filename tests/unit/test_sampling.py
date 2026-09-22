@@ -7,12 +7,19 @@ import pytest
 from find_that_text.video.sampling import estimated_sample_interval_seconds, resolve_scan_mode
 
 
-def test_default_mode_uses_one_second_adaptive_heartbeat() -> None:
+def test_default_mode_checks_every_23_frames() -> None:
     mode = resolve_scan_mode("default")
     assert mode.name == "default"
+    assert mode.interval_seconds is None
+    assert mode.frame_step == 23
+    assert mode.description == "every 23 frames"
+
+
+def test_adaptive_mode_remains_available() -> None:
+    mode = resolve_scan_mode("adaptive")
+    assert mode.name == "adaptive"
     assert mode.interval_seconds == 1.0
     assert mode.frame_step is None
-    assert mode.description == "every 1.00s"
 
 
 def test_advanced_mode_checks_every_frame() -> None:

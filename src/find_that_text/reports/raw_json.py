@@ -23,6 +23,7 @@ def write_raw_json(
     review_breadth: float = 0.5,
     caption_path: Path | None = None,
     dialogue_optimization: bool = False,
+    dialogue_gaps_only: bool = False,
     scene_detection: bool = False,
     scene_change_times: list[float] | None = None,
 ) -> None:
@@ -50,6 +51,7 @@ def write_raw_json(
             "ocr_model": ocr_model,
             "caption_filename": caption_path.name if caption_path else None,
             "dialogue_optimization": dialogue_optimization,
+            "dialogue_gaps_only": dialogue_gaps_only,
             "scene_detection": scene_detection,
             "scene_change_times": [round(value, 3) for value in (scene_change_times or [])],
         },

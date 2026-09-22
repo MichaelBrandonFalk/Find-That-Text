@@ -30,11 +30,17 @@ def write_html_report(
     review_breadth: float = 0.5,
     caption_path: Path | None = None,
     dialogue_optimization: bool = False,
+    dialogue_gaps_only: bool = False,
     scene_detection: bool = False,
 ) -> None:
     scan_end = scan_end_seconds if scan_end_seconds is not None else metadata.duration_seconds
     counts = bucket_counts(events)
     caption_label = caption_path.name if caption_path else "None (uniform scan)"
+    scan_scope = (
+        "Dialogue gaps only"
+        if dialogue_gaps_only
+        else "Full video (no captions available)" if caption_path is None else "Full video"
+    )
     html = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -91,7 +97,8 @@ def write_html_report(
       <div><strong>Scan Mode</strong><br>{escape(scan_mode.name)} ({escape(scan_mode.description)})</div>
       <div><strong>Scan Range</strong><br>{format_timestamp(scan_start_seconds)} to {format_timestamp(scan_end)}</div>
       <div><strong>Dialogue Captions</strong><br>{escape(caption_label)}</div>
-      <div><strong>Dialogue Optimization</strong><br>{"On" if dialogue_optimization else "Off"}</div>
+      <div><strong>Scan Scope</strong><br>{escape(scan_scope)}</div>
+      <div><strong>Adaptive Cadence</strong><br>{"On" if dialogue_optimization else "Off"}</div>
       <div><strong>Scene Detection</strong><br>{"On" if scene_detection else "Off"}</div>
       <div><strong>Review Breadth</strong><br>{review_breadth:.0%}</div>
       <div><strong>OCR Model</strong><br>{escape(ocr_model)}</div>

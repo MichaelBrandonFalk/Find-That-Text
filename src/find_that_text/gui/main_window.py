@@ -102,6 +102,7 @@ class MainWindow(QMainWindow):
         self.resize(780, 780)
         self.video_path: Path | None = None
         self.caption_path: Path | None = None
+        self.auto_find_captions = True
         self.output_dir: Path | None = None
         self.thread: ScanThread | None = None
         self._build_ui()
@@ -147,9 +148,10 @@ class MainWindow(QMainWindow):
         caption_row.addWidget(self.caption_button)
         caption_row.addWidget(self.clear_caption_button)
         caption_layout.addLayout(caption_row)
-        self.dialogue_optimization_check = QCheckBox("Scan dialogue gaps more closely")
-        self.dialogue_optimization_check.setChecked(True)
-        caption_layout.addWidget(self.dialogue_optimization_check)
+        self.gap_only_check = QCheckBox("Scan only where dialogue captions are absent")
+        self.gap_only_check.setChecked(True)
+        self.gap_only_check.setToolTip("Fastest with SRT/VTT captions; text shown during dialogue may be missed.")
+        caption_layout.addWidget(self.gap_only_check)
         layout.addWidget(caption_group)
 
         range_form = QGridLayout()
@@ -171,8 +173,9 @@ class MainWindow(QMainWindow):
         self.advanced_group = QGroupBox("Advanced Settings")
         advanced_form = QGridLayout(self.advanced_group)
         self.mode_combo = QComboBox()
-        self.mode_combo.addItem("Recommended - adaptive scan", "default")
-        self.mode_combo.addItem("Diagnostic - every frame", "advanced")
+        self.mode_combo.addItem("Fastest - every 23 frames", "default")
+        self.mode_combo.addItem("Adaptive - closer checks in gaps", "adaptive")
+        self.mode_combo.addItem("Every frame", "advanced")
         self.mode_combo.addItem("Custom frame interval", "custom")
         advanced_form.addWidget(QLabel("Scan Mode"), 0, 0)
         advanced_form.addWidget(self.mode_combo, 0, 1)
@@ -199,7 +202,8 @@ class MainWindow(QMainWindow):
         advanced_form.addWidget(self.breadth_value, 3, 1)
 
         self.scene_detection_check = QCheckBox("Use scene-change detection")
-        self.scene_detection_check.setChecked(True)
+        self.scene_detection_check.setChecked(False)
+        self.scene_detection_check.setToolTip("Adds a full-video scene pass before OCR; useful for brief text at cuts.")
         self.annotated_check = QCheckBox("Save annotated screenshots")
         advanced_form.addWidget(self.scene_detection_check, 4, 1)
         advanced_form.addWidget(self.annotated_check, 5, 1)
@@ -274,23 +278,29 @@ class MainWindow(QMainWindow):
 
     def set_video_path(self, path: Path) -> None:
         self.video_path = path
+        self.auto_find_captions = True
         self.file_label.setText(path.name)
         sidecar = find_sidecar_caption(path)
         if sidecar:
             self.set_caption_path(sidecar, auto_detected=True)
             self.status_label.setText("Ready - matching captions found")
         else:
-            self.clear_caption()
-            self.status_label.setText("Ready - uniform scan without captions")
+            self.caption_path = None
+            self.caption_label.setText("No SRT or VTT selected")
+            self.status_label.setText("Ready - no captions; scanning all video at 23-frame intervals")
 
     def set_caption_path(self, path: Path, *, auto_detected: bool) -> None:
         self.caption_path = path
+        self.auto_find_captions = auto_detected
         suffix = " (automatic)" if auto_detected else ""
         self.caption_label.setText(f"{path.name}{suffix}")
 
     def clear_caption(self) -> None:
         self.caption_path = None
+        self.auto_find_captions = False
         self.caption_label.setText("No SRT or VTT selected")
+        if self.video_path:
+            self.status_label.setText("Ready - no captions; scanning the full video")
 
     def start_scan(self) -> None:
         if self.video_path is None:
@@ -310,7 +320,8 @@ class MainWindow(QMainWindow):
             start_seconds=start_seconds,
             end_seconds=end_seconds,
             caption_path=self.caption_path,
-            use_dialogue_optimization=self.dialogue_optimization_check.isChecked(),
+            auto_find_captions=self.auto_find_captions,
+            only_dialogue_gaps=self.gap_only_check.isChecked(),
             enable_scene_detection=self.scene_detection_check.isChecked(),
             save_annotated_screenshots=self.annotated_check.isChecked(),
         )

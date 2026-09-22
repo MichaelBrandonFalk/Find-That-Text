@@ -46,8 +46,10 @@ class ScanSettings:
     start_seconds: float | None = None
     end_seconds: float | None = None
     caption_path: str | Path | None = None
+    auto_find_captions: bool = True
+    only_dialogue_gaps: bool = True
     use_dialogue_optimization: bool = True
-    enable_scene_detection: bool = True
+    enable_scene_detection: bool = False
     quiet_interval_seconds: float = 0.5
     dialogue_interval_seconds: float = 2.0
     max_ocr_dimension: int = 1280
@@ -121,6 +123,7 @@ def scan_video(
     output_dir = create_output_dir(video_path, settings.output_root)
     configure_logging(output_dir)
     caption_timeline = _load_caption_timeline(video_path, settings)
+    dialogue_gaps_only_active = settings.only_dialogue_gaps and caption_timeline is not None
     scene_detection_active = settings.enable_scene_detection and scan_mode.frame_step != 1
 
     if progress_callback:
@@ -174,18 +177,42 @@ def scan_video(
     candidate_cache_dir = output_dir / ".candidate_frames"
     priority_timestamps = list(scene_change_times)
     interval_selector = None
-    if caption_timeline is not None and settings.use_dialogue_optimization:
+    sample_filter = None
+    if dialogue_gaps_only_active and caption_timeline is not None:
+        sample_filter = lambda timestamp: not caption_timeline.is_dialogue_active(timestamp)
+    if caption_timeline is not None and settings.use_dialogue_optimization and scan_mode.name == "adaptive":
         priority_timestamps.extend(
             caption_timeline.quiet_gap_starts(
                 start_seconds=start_seconds,
                 end_seconds=end_seconds,
             )
         )
-        if scan_mode.name == "default":
-            interval_selector = lambda timestamp: (
-                settings.dialogue_interval_seconds
-                if caption_timeline.is_dialogue_active(timestamp)
-                else settings.quiet_interval_seconds
+        interval_selector = lambda timestamp: (
+            settings.dialogue_interval_seconds
+            if caption_timeline.is_dialogue_active(timestamp)
+            else settings.quiet_interval_seconds
+        )
+
+    last_progress_seconds = start_seconds
+
+    def on_decoded_frame(timestamp: float) -> None:
+        nonlocal last_progress_seconds
+        if cancel_event and cancel_event.is_set():
+            remove_candidate_cache(candidate_cache_dir)
+            raise ScanCancelled("Scan cancelled.")
+        if progress_callback and timestamp - last_progress_seconds >= 5.0:
+            last_progress_seconds = timestamp
+            progress_callback(
+                ScanProgress(
+                    filename=source_filename,
+                    duration_seconds=metadata.duration_seconds,
+                    current_seconds=timestamp,
+                    frames_processed=processed_samples,
+                    detections_found=len(detections),
+                    range_start_seconds=start_seconds,
+                    range_end_seconds=end_seconds,
+                    phase="Scanning dialogue gaps" if dialogue_gaps_only_active else "Scanning full video",
+                )
             )
 
     for sample in iter_sampled_frames(
@@ -196,6 +223,8 @@ def scan_video(
         end_seconds=end_seconds,
         priority_timestamps=priority_timestamps,
         interval_selector=interval_selector,
+        sample_filter=sample_filter,
+        decoded_frame_callback=on_decoded_frame,
         max_dimension=None if tiling_enabled else settings.max_ocr_dimension,
     ):
         if cancel_event and cancel_event.is_set():
@@ -242,14 +271,14 @@ def scan_video(
                     detections_found=len(detections),
                     range_start_seconds=start_seconds,
                     range_end_seconds=end_seconds,
-                    phase="Scanning and ranking text",
+                    phase="Scanning dialogue gaps" if dialogue_gaps_only_active else "Scanning full video",
                 )
             )
 
     tracking_interval = max(
         sample_interval_seconds,
         settings.dialogue_interval_seconds
-        if caption_timeline is not None and settings.use_dialogue_optimization
+        if caption_timeline is not None and settings.use_dialogue_optimization and scan_mode.name == "adaptive"
         else sample_interval_seconds,
     )
     line_events = track_detections(
@@ -290,7 +319,10 @@ def scan_video(
         min_ocr_confidence=min_ocr_confidence,
         review_breadth=review_breadth,
         caption_path=caption_timeline.path if caption_timeline else None,
-        dialogue_optimization=settings.use_dialogue_optimization and caption_timeline is not None,
+        dialogue_optimization=(
+            settings.use_dialogue_optimization and caption_timeline is not None and scan_mode.name == "adaptive"
+        ),
+        dialogue_gaps_only=dialogue_gaps_only_active,
         scene_detection=scene_detection_active,
     )
     write_raw_json(
@@ -305,7 +337,10 @@ def scan_video(
         min_ocr_confidence=min_ocr_confidence,
         review_breadth=review_breadth,
         caption_path=caption_timeline.path if caption_timeline else None,
-        dialogue_optimization=settings.use_dialogue_optimization and caption_timeline is not None,
+        dialogue_optimization=(
+            settings.use_dialogue_optimization and caption_timeline is not None and scan_mode.name == "adaptive"
+        ),
+        dialogue_gaps_only=dialogue_gaps_only_active,
         scene_detection=scene_detection_active,
         scene_change_times=scene_change_times,
     )
@@ -364,9 +399,9 @@ def _load_caption_timeline(
     video_path: str | Path,
     settings: ScanSettings,
 ) -> CaptionTimeline | None:
-    if not settings.use_dialogue_optimization:
-        return None
-    caption_path = Path(settings.caption_path) if settings.caption_path else find_sidecar_caption(video_path)
+    caption_path = Path(settings.caption_path) if settings.caption_path else None
+    if caption_path is None and settings.auto_find_captions:
+        caption_path = find_sidecar_caption(video_path)
     if caption_path is None:
         return None
     return CaptionTimeline.from_file(caption_path)

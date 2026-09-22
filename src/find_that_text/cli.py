@@ -17,9 +17,9 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("video", type=Path, help="Path to MOV, MP4, or M4V video.")
     scan.add_argument(
         "--mode",
-        choices=["default", "advanced", "custom", "standard", "fast", "thorough"],
+        choices=["default", "adaptive", "advanced", "custom", "standard", "fast", "thorough"],
         default="default",
-        help="default uses adaptive time/scene sampling; advanced checks every frame.",
+        help="default checks every 23 frames; adaptive checks gaps more closely; advanced checks every frame.",
     )
     custom = scan.add_mutually_exclusive_group()
     custom.add_argument(
@@ -47,8 +47,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Result focus from 0.0 (broad) to 1.0 (focused).",
     )
     scan.add_argument("--captions", type=Path, default=None, help="Optional English or Spanish SRT/VTT dialogue captions.")
-    scan.add_argument("--no-dialogue-optimization", action="store_true")
-    scan.add_argument("--no-scene-detection", action="store_true")
+    scan.add_argument("--no-auto-captions", action="store_true", help="Do not find a matching SRT/VTT sidecar automatically.")
+    scan.add_argument("--scan-during-dialogue", action="store_true", help="Scan sampled frames even during captioned dialogue.")
+    scan.add_argument("--no-dialogue-optimization", action="store_true", help="Disable gap-aware cadence in adaptive mode.")
+    scene = scan.add_mutually_exclusive_group()
+    scene.add_argument("--scene-detection", dest="scene_detection", action="store_true", help="Also check scene cuts (adds a full-video pass).")
+    scene.add_argument("--no-scene-detection", dest="scene_detection", action="store_false", help="Skip scene detection (default).")
+    scan.set_defaults(scene_detection=False)
     scan.add_argument("--start", type=parse_timestamp, default=None, help="Start timestamp, for example 00:00:00.")
     scan.add_argument("--end", type=parse_timestamp, default=None, help="End timestamp, for example 00:30:30.")
     scan.add_argument("--output", type=Path, default=None, help="Output root folder.")
@@ -76,8 +81,10 @@ def main(argv: list[str] | None = None) -> int:
             start_seconds=args.start,
             end_seconds=args.end,
             caption_path=args.captions,
+            auto_find_captions=not args.no_auto_captions,
+            only_dialogue_gaps=not args.scan_during_dialogue,
             use_dialogue_optimization=not args.no_dialogue_optimization,
-            enable_scene_detection=not args.no_scene_detection,
+            enable_scene_detection=args.scene_detection,
             output_root=args.output,
             save_annotated_screenshots=args.save_annotated_screenshots,
             ocr_backend=None if args.ocr_backend == "paddle" else args.ocr_backend,

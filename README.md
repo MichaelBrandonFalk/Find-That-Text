@@ -21,26 +21,27 @@ The app does not decide what is essential to the plot. It creates a short, ranke
 ## Recommended Scan
 
 1. Choose or drop in a MOV, MP4, or M4V video.
-2. Optionally choose English or Spanish dialogue captions in SRT or VTT format. A matching sidecar is selected automatically when available.
-3. Leave **Scan dialogue gaps more closely** enabled to scan silent sections more densely.
+2. Add an English or Spanish dialogue SRT/VTT file. A matching sidecar is selected automatically when available.
+3. Leave **Scan only where dialogue captions are absent** and **Fastest - every 23 frames** selected.
 4. Scan the full video or enter an optional start/end range.
 5. Review **Likely Forced Text** first, then **Needs Review**. Background graphics and credits remain available in a collapsed section.
 
-Captions are optional. Without captions, Find That Text uses a uniform adaptive scan and scene changes. This supports workflows both before and after dialogue captions are created.
+The two speed choices are independent. Turn off gap-only scanning to include text that appears during dialogue, or choose a closer frame interval under Advanced Settings. With no captions, the app scans the whole video every 23 frames. This supports workflows both before and after dialogue captions are created.
 
 ## How Scanning Works
 
-Recommended mode uses several signals together:
+Fastest mode is the default:
 
-- A one-second heartbeat when no dialogue captions are available
-- Half-second sampling in dialogue-free gaps and two-second sampling during dialogue when optimization is enabled
-- Priority samples at quiet-gap boundaries and scene changes
+- Check every 23rd source frame and send only those frames to OCR
+- With dialogue captions, OCR only sampled frames outside captioned dialogue (including a 0.15-second margin)
+- With no captions, scan sampled frames across the full video
+- Skip the full-video scene-change prepass
 - PP-OCRv6 small detection and recognition models on frames capped at 1280 pixels
 - Detector confidence, OCR confidence, temporal confirmation, text shape, screen size and position, dialogue gaps, repeated graphics, and credit-density scoring
 
 Nothing is removed solely because it receives a low relevance score. Every grouped event is included in one of three report sections, and the raw JSON preserves the underlying detections.
 
-Diagnostic every-frame mode and a custom frame interval remain available under Advanced Settings. Every-frame mode is intended for short ranges because a feature-length scan can take much longer.
+Gap-only scanning can miss plot text shown while people speak, and sampling can miss very brief text. For broader coverage, turn off the gap-only checkbox, use Adaptive or a smaller custom frame interval, and optionally enable scene-change detection. Every-frame mode is intended for short ranges because a feature-length scan can take much longer. These controls can be changed separately. If you clear an automatically selected caption file, it will not be silently reselected for that scan.
 
 ## Reports
 
@@ -53,7 +54,7 @@ Each scan writes a folder containing:
 
 ## Performance Target
 
-The recommended pipeline is designed to scan a two-hour feature in two hours or less on supported Apple Silicon hardware. Actual time depends on the Mac, source codec, dialogue density, scene count, and detected text volume. Full-feature benchmarking remains part of release validation; the app does not present a guaranteed completion time.
+The fastest pipeline targets a two-hour feature in two hours or less on supported Apple Silicon hardware. Actual time depends on the Mac, source codec, dialogue density, and detected text volume. Full-feature benchmarking remains part of release validation; the app does not present a guaranteed completion time.
 
 ## Privacy
 
@@ -88,7 +89,8 @@ To scan from the CLI:
 ```bash
 find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.en.srt"
 find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.es.vtt" --start 00:00:00 --end 00:30:30
-find-that-text scan "/path/to/movie.mov" --no-dialogue-optimization
+find-that-text scan "/path/to/movie.mov" --scan-during-dialogue
+find-that-text scan "/path/to/movie.mov" --mode adaptive --scene-detection
 find-that-text scan "/path/to/movie.mov" --mode custom --custom-frame-step 7 --review-breadth 0.35
 ```
 
