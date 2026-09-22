@@ -26,7 +26,8 @@ body {
 }
 
 .hero {
-  min-height: 680px;
+  height: min(680px, 82vh);
+  min-height: 560px;
   padding: 0 28px;
   color: var(--ink);
   background: var(--sky) url("assets/pastel-clouds-hero.jpg") center / cover no-repeat;
@@ -58,7 +59,7 @@ nav {
   font-weight: 700;
   font-size: 15px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 h1 {
@@ -131,22 +132,78 @@ main {
   background: var(--panel);
 }
 
-.band,
+.workflow,
+.outputs,
 .privacy,
 .install {
   padding: 68px max(28px, calc((100vw - 1180px) / 2));
 }
 
-.band {
+.workflow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 72px;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.4fr);
+  column-gap: 80px;
+  row-gap: 28px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
 
-li {
-  margin: 10px 0;
+.workflow-intro > p:last-child {
+  max-width: 400px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.workflow-steps {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.workflow-steps li {
+  padding: 0 0 16px 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.workflow-steps li:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.workflow-steps li::marker {
+  color: var(--accent-strong);
+  font-weight: 750;
+}
+
+.workflow-steps strong {
+  color: var(--ink);
+}
+
+.workflow-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.outputs {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  background: var(--blush);
+}
+
+.outputs ul {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.outputs li {
+  margin: 0 0 10px;
 }
 
 .privacy {
@@ -166,7 +223,7 @@ li {
   font-size: 14px;
   font-weight: 750;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .install {
@@ -202,7 +259,8 @@ main a {
 
 @media (max-width: 720px) {
   .hero {
-    min-height: 660px;
+    height: min(640px, 88vh);
+    min-height: 560px;
     padding: 0 20px;
     background-position: 62% center;
   }
@@ -229,14 +287,17 @@ main a {
     width: 100%;
   }
 
-  .band,
+  .workflow,
+  .outputs,
   .privacy,
   .install {
     padding: 52px 24px;
   }
 
-  .band {
-    gap: 36px;
+  .workflow,
+  .outputs {
+    grid-template-columns: 1fr;
+    gap: 30px;
   }
 
   footer {
@@ -246,7 +307,8 @@ main a {
 
 @media (max-width: 420px) {
   .hero {
-    min-height: 640px;
+    height: auto;
+    min-height: 560px;
   }
 
   nav {

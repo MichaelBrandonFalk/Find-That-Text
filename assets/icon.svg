@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Find That Text temporary icon">
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <rect x="72" y="104" width="368" height="248" rx="26" fill="#f8fafc"/>
+  <rect x="102" y="136" width="308" height="32" rx="8" fill="#14b8a6"/>
+  <rect x="102" y="196" width="218" height="26" rx="8" fill="#334155"/>
+  <rect x="102" y="244" width="260" height="26" rx="8" fill="#334155"/>
+  <circle cx="334" cy="328" r="72" fill="none" stroke="#f59e0b" stroke-width="30"/>
+  <path d="M384 378l58 58" stroke="#f59e0b" stroke-width="34" stroke-linecap="round"/>
+</svg>
