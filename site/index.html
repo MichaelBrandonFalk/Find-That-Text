@@ -27,25 +27,30 @@
     </section>
   </header>
   <main>
-    <section class="band">
-      <div>
-        <h2>How It Works</h2>
-        <ol>
-          <li>Drop in a video.</li>
-          <li>Add optional English or Spanish SRT/VTT captions.</li>
-          <li>Scan locally with extra attention to dialogue-free moments.</li>
-          <li>Review likely forced text first.</li>
-        </ol>
+    <section class="workflow">
+      <div class="workflow-intro">
+        <p class="section-label">Best route for a feature</p>
+        <h2>A smooth first run</h2>
+        <p>Start with the recommended scan. It checks scene changes and samples the movie without the cost of examining every frame. An existing English or Spanish caption file helps it focus on quiet moments, but is not required.</p>
       </div>
+      <ol class="workflow-steps">
+        <li><strong>Choose your video.</strong> Add an SRT or VTT dialogue file if you have one. A matching caption file beside the video is picked up automatically.</li>
+        <li><strong>Keep the defaults.</strong> Leave <em>Recommended - adaptive scan</em> and <em>Scan dialogue gaps more closely</em> selected. Leave the end time blank for the full movie.</li>
+        <li><strong>Try a short range first if you like.</strong> Set an end time around ten minutes to check the results, then clear it for the full scan. Save every-frame and custom intervals for targeted rescans.</li>
+        <li><strong>Review the strongest matches first.</strong> Open the report's Likely Forced Text section, then Needs Review. Background graphics and credits stay available, but out of your way.</li>
+      </ol>
+      <p class="workflow-note">The scan runs locally. Scanning a two-hour feature in two hours or less is a design target, not a guarantee; actual time varies with the movie and Mac.</p>
+    </section>
+    <section class="outputs">
       <div>
-        <h2>Outputs</h2>
-        <ul>
-          <li>Ranked candidate report</li>
-          <li>Likely, review, and background sections</li>
-          <li>Evidence screenshots</li>
-          <li>CSV and raw OCR audit data</li>
-        </ul>
+        <p class="section-label">Your review package</p>
+        <h2>Everything needed to cross-check a scene</h2>
       </div>
+      <ul>
+        <li>Ranked candidate report</li>
+        <li>Evidence screenshots</li>
+        <li>CSV and raw OCR audit data</li>
+      </ul>
     </section>
     <section class="privacy">
       <p class="section-label">Before or after dialogue captions</p>
