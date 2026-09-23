@@ -30,7 +30,14 @@ from PySide6.QtWidgets import (
 
 from find_that_text.captions import find_sidecar_caption
 from find_that_text.ocr.engine import PaddleOCREngine
-from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, scan_video
+from find_that_text.scanner import (
+    DialogueGapResult,
+    ScanCancelled,
+    ScanProgress,
+    ScanSettings,
+    find_dialogue_gaps,
+    scan_video,
+)
 from find_that_text.tracking.relevance import LIKELY_FORCED_TEXT, NEEDS_REVIEW, bucket_counts
 from find_that_text.util.paths import default_reports_root
 from find_that_text.util.timestamps import format_timestamp, parse_timestamp
@@ -83,12 +90,15 @@ class ScanThread(QThread):
 
     def run(self) -> None:
         try:
-            result = scan_video(
-                self.video_path,
-                settings=self.settings,
-                progress_callback=lambda progress: self.progressChanged.emit(progress),
-                cancel_event=self.cancel_event,
-            )
+            if self.settings.gaps_only:
+                result = find_dialogue_gaps(self.video_path, settings=self.settings)
+            else:
+                result = scan_video(
+                    self.video_path,
+                    settings=self.settings,
+                    progress_callback=lambda progress: self.progressChanged.emit(progress),
+                    cancel_event=self.cancel_event,
+                )
         except ScanCancelled:
             self.scanCancelled.emit()
         except Exception as exc:  # pragma: no cover - GUI surface
@@ -166,6 +176,19 @@ class MainWindow(QMainWindow):
         caption_layout.addWidget(self.gap_only_check)
         layout.addWidget(caption_group)
 
+        run_row = QHBoxLayout()
+        self.run_combo = QComboBox()
+        self.run_combo.addItem("Screen-text scan", False)
+        self.run_combo.addItem("Super Speed Run - dialogue gaps only", True)
+        self.run_combo.setItemData(
+            1,
+            "Exports dialogue-free timecodes from SRT/VTT captions. No video frames or OCR are processed.",
+            Qt.ItemDataRole.ToolTipRole,
+        )
+        run_row.addWidget(QLabel("Run"))
+        run_row.addWidget(self.run_combo, 1)
+        layout.addLayout(run_row)
+
         range_form = QGridLayout()
         self.start_time_input = QLineEdit()
         self.start_time_input.setPlaceholderText("00:00:00")
@@ -230,8 +253,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.advanced_group)
 
         self.mode_combo.currentIndexChanged.connect(self._sync_scan_mode_controls)
+        self.run_combo.currentIndexChanged.connect(self._sync_run_controls)
         self.breadth_slider.valueChanged.connect(self._update_breadth_label)
         self._sync_scan_mode_controls()
+        self._sync_caption_controls()
         self._update_breadth_label(self.breadth_slider.value())
 
         self.progress = QProgressBar()
@@ -260,6 +285,7 @@ class MainWindow(QMainWindow):
         buttons.addWidget(self.scan_button)
         controls_layout.addLayout(buttons)
         outer_layout.addWidget(controls)
+        self._sync_run_controls()
 
         technology_label = QLabel(
             'Video: <a href="https://ffmpeg.org/">FFmpeg</a> via '
@@ -324,23 +350,29 @@ class MainWindow(QMainWindow):
             self.caption_path = None
             self.caption_label.setText("No SRT or VTT selected")
             self.status_label.setText("Ready - no captions; scanning all video at 23-frame intervals")
+            self._sync_caption_controls()
 
     def set_caption_path(self, path: Path, *, auto_detected: bool) -> None:
         self.caption_path = path
         self.auto_find_captions = auto_detected
         suffix = " (automatic)" if auto_detected else ""
         self.caption_label.setText(f"{path.name}{suffix}")
+        self._sync_caption_controls()
 
     def clear_caption(self) -> None:
         self.caption_path = None
         self.auto_find_captions = False
         self.caption_label.setText("No SRT or VTT selected")
+        self._sync_caption_controls()
         if self.video_path:
             self.status_label.setText("Ready - no captions; scanning the full video")
 
     def start_scan(self) -> None:
         if self.video_path is None:
             QMessageBox.information(self, "Choose a video", "Choose or drop a video before scanning.")
+            return
+        if self.run_combo.currentData() and self.caption_path is None:
+            QMessageBox.information(self, "Choose captions", "Super Speed Run needs an SRT or VTT caption file.")
             return
         try:
             start_seconds = self._optional_timestamp(self.start_time_input.text())
@@ -350,6 +382,7 @@ class MainWindow(QMainWindow):
             return
         settings = ScanSettings(
             mode=str(self.mode_combo.currentData()),
+            gaps_only=bool(self.run_combo.currentData()),
             custom_frame_step=self.custom_frame_step.value(),
             min_ocr_confidence=0.0,
             review_breadth=self.breadth_slider.value() / 100.0,
@@ -371,7 +404,7 @@ class MainWindow(QMainWindow):
         self.cancel_button.setEnabled(True)
         self.open_output_button.setEnabled(False)
         self.progress.setValue(0)
-        self.status_label.setText("Preparing scan...")
+        self.status_label.setText("Finding dialogue gaps..." if settings.gaps_only else "Preparing scan...")
         self.thread.start()
 
     def cancel_scan(self) -> None:
@@ -394,12 +427,15 @@ class MainWindow(QMainWindow):
 
     def scan_finished(self, result: object) -> None:
         self.output_dir = result.output_dir
-        counts = bucket_counts(result.events)
         self.progress.setValue(1000)
-        self.status_label.setText(
-            f"Complete - {counts[LIKELY_FORCED_TEXT]} likely forced text, "
-            f"{counts[NEEDS_REVIEW]} to review"
-        )
+        if isinstance(result, DialogueGapResult):
+            self.status_label.setText(f"Complete - {len(result.gaps)} dialogue gaps; no OCR run")
+        else:
+            counts = bucket_counts(result.events)
+            self.status_label.setText(
+                f"Complete - {counts[LIKELY_FORCED_TEXT]} likely forced text, "
+                f"{counts[NEEDS_REVIEW]} to review"
+            )
         self.scan_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
         self.open_output_button.setEnabled(True)
@@ -428,6 +464,17 @@ class MainWindow(QMainWindow):
     def _sync_scan_mode_controls(self, _index: int = -1) -> None:
         self.custom_frame_step.setEnabled(self.mode_combo.currentData() == "custom")
         self.reuse_check.setEnabled(self.mode_combo.currentData() != "advanced")
+
+    def _sync_caption_controls(self) -> None:
+        self.run_combo.model().item(1).setEnabled(self.caption_path is not None)
+        if self.caption_path is None and self.run_combo.currentData():
+            self.run_combo.setCurrentIndex(0)
+
+    def _sync_run_controls(self, _index: int = -1) -> None:
+        gaps_only = bool(self.run_combo.currentData())
+        self.scan_button.setText("Find Dialogue Gaps" if gaps_only else "Scan Video")
+        self.gap_only_check.setEnabled(not gaps_only)
+        self.advanced_group.setEnabled(not gaps_only)
 
     def _update_breadth_label(self, value: int) -> None:
         if value <= 25:

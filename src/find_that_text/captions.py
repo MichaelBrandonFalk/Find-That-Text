@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bisect
+import html
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,14 @@ from pathlib import Path
 _TIMING_LINE = re.compile(
     r"(?P<start>(?:\d{1,3}:)?\d{1,2}:\d{2}[.,]\d{3})\s*-->\s*"
     r"(?P<end>(?:\d{1,3}:)?\d{1,2}:\d{2}[.,]\d{3})"
+)
+_VTT_TAG = re.compile(r"<[^>]+>")
+_STAGE_DIRECTION = re.compile(r"\[[^\]]+\]|\([^)]*\)")
+_NON_SPEECH_LABEL = re.compile(
+    r"(?:music|musica|música|sfx|sound effects?|sonidos?|applause|aplausos|"
+    r"laughter|risas|laughing|cheering|silence|silencio|instrumental)"
+    r"(?:\s*[:\-]\s*.*|\s+(?:plays?|playing|continues?|fades?|starts?|stops?|suena|continúa))?",
+    re.IGNORECASE,
 )
 
 
@@ -23,6 +32,8 @@ class CaptionTimeline:
     path: Path
     cues: tuple[CaptionCue, ...]
     _starts: tuple[float, ...]
+    total_cue_count: int = 0
+    non_dialogue_cue_count: int = 0
 
     @classmethod
     def from_file(cls, path: str | Path) -> CaptionTimeline:
@@ -31,18 +42,38 @@ class CaptionTimeline:
             raise ValueError("Dialogue captions must be an SRT or VTT file.")
         text = caption_path.read_text(encoding="utf-8-sig", errors="replace")
         cues: list[CaptionCue] = []
-        for line in text.splitlines():
-            match = _TIMING_LINE.search(line)
-            if not match:
+        total_cues = 0
+        non_dialogue_cues = 0
+        for block in re.split(r"\n\s*\n", text.replace("\r\n", "\n").replace("\r", "\n")):
+            lines = block.splitlines()
+            if lines and lines[0].strip().upper().startswith(("NOTE", "STYLE", "REGION", "WEBVTT")):
                 continue
+            timing = next(
+                ((index, match) for index, line in enumerate(lines) if (match := _TIMING_LINE.search(line))),
+                None,
+            )
+            if timing is None:
+                continue
+            timing_index, match = timing
+            total_cues += 1
             start = _parse_caption_timestamp(match.group("start"))
             end = _parse_caption_timestamp(match.group("end"))
-            if end > start:
+            if end <= start:
+                continue
+            if _contains_dialogue(lines[timing_index + 1 :]):
                 cues.append(CaptionCue(start, end))
-        if not cues:
+            else:
+                non_dialogue_cues += 1
+        if not total_cues:
             raise ValueError(f"No timed caption cues were found in {caption_path.name}.")
         merged = _merge_cues(cues)
-        return cls(caption_path, tuple(merged), tuple(cue.start_seconds for cue in merged))
+        return cls(
+            caption_path,
+            tuple(merged),
+            tuple(cue.start_seconds for cue in merged),
+            total_cues,
+            non_dialogue_cues,
+        )
 
     def is_dialogue_active(self, timestamp_seconds: float, *, padding_seconds: float = 0.15) -> bool:
         if not self.cues:
@@ -58,6 +89,29 @@ class CaptionTimeline:
             return 0.0
         quiet = sum(not self.is_dialogue_active(timestamp) for timestamp in timestamps)
         return quiet / len(timestamps)
+
+    def dialogue_gaps(
+        self,
+        *,
+        start_seconds: float,
+        end_seconds: float,
+        padding_seconds: float = 0.15,
+    ) -> list[CaptionCue]:
+        if end_seconds < start_seconds:
+            raise ValueError("End time must be after start time.")
+        gaps: list[CaptionCue] = []
+        cursor = start_seconds
+        for cue in self.cues:
+            blocked_start = max(start_seconds, cue.start_seconds - padding_seconds)
+            blocked_end = min(end_seconds, cue.end_seconds + padding_seconds)
+            if blocked_end <= cursor or blocked_start >= end_seconds:
+                continue
+            if blocked_start > cursor:
+                gaps.append(CaptionCue(cursor, blocked_start))
+            cursor = max(cursor, blocked_end)
+        if cursor < end_seconds:
+            gaps.append(CaptionCue(cursor, end_seconds))
+        return gaps
 
     def quiet_gap_starts(
         self,
@@ -125,3 +179,19 @@ def _merge_cues(cues: list[CaptionCue]) -> list[CaptionCue]:
         else:
             merged.append(cue)
     return merged
+
+
+def _contains_dialogue(lines: list[str]) -> bool:
+    for raw_line in lines:
+        line = html.unescape(_VTT_TAG.sub("", raw_line)).strip()
+        line = re.sub(r"^[-–—]\s*", "", line)
+        if not line:
+            continue
+        if "♪" in line or "♫" in line or "♬" in line:
+            continue
+        if _NON_SPEECH_LABEL.fullmatch(line):
+            continue
+        line = _STAGE_DIRECTION.sub("", line).strip(" -–—: \t")
+        if line and not _NON_SPEECH_LABEL.fullmatch(line):
+            return True
+    return False

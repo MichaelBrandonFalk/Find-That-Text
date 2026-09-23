@@ -3,15 +3,17 @@ from __future__ import annotations
 import logging
 import math
 import threading
+from bisect import bisect_right
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
-from find_that_text.captions import CaptionTimeline, find_sidecar_caption
+from find_that_text.captions import CaptionCue, CaptionTimeline, find_sidecar_caption
 from find_that_text.ocr.engine import OCREngine, OCRTextObservation, PaddleOCREngine
 from find_that_text.ocr.reuse import OCRReuseCache
 from find_that_text.ocr.tiling import recognize_with_optional_tiling
 from find_that_text.reports.csv_report import write_csv_report
+from find_that_text.reports.dialogue_gaps import write_dialogue_gap_reports
 from find_that_text.reports.html_report import write_html_report
 from find_that_text.reports.raw_json import write_raw_json
 from find_that_text.reports.screenshots import (
@@ -40,6 +42,7 @@ class ScanCancelled(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class ScanSettings:
     mode: str = "default"
+    gaps_only: bool = False
     custom_frame_step: int | None = None
     custom_interval_seconds: float | None = None
     min_ocr_confidence: float = 0.0
@@ -100,6 +103,16 @@ class ScanResult:
     caption_path: Path | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class DialogueGapResult:
+    output_dir: Path
+    metadata: VideoMetadata
+    caption_path: Path
+    gaps: list[CaptionCue]
+    report_html: Path
+    report_csv: Path
+
+
 ProgressCallback = Callable[[ScanProgress], None]
 
 
@@ -126,6 +139,19 @@ def scan_video(
     configure_logging(output_dir)
     caption_timeline = _load_caption_timeline(video_path, settings)
     dialogue_gaps_only_active = settings.only_dialogue_gaps and caption_timeline is not None
+    dialogue_gaps = (
+        caption_timeline.dialogue_gaps(start_seconds=start_seconds, end_seconds=end_seconds)
+        if caption_timeline is not None and end_seconds is not None
+        else None
+    )
+    if caption_timeline is not None and dialogue_gaps is not None:
+        write_dialogue_gap_reports(
+            output_dir,
+            metadata=metadata,
+            timeline=caption_timeline,
+            gaps=dialogue_gaps,
+            ocr_performed=True,
+        )
     scene_detection_active = settings.enable_scene_detection and scan_mode.frame_step != 1
 
     if progress_callback:
@@ -163,9 +189,10 @@ def scan_video(
     )
     if caption_timeline is not None:
         LOGGER.info(
-            "Using dialogue timeline captions=%s cues=%d optimization=%s",
+            "Using dialogue timeline captions=%s dialogue_cues=%d non_dialogue_cues=%d optimization=%s",
             caption_timeline.path,
             len(caption_timeline.cues),
+            caption_timeline.non_dialogue_cue_count,
             settings.use_dialogue_optimization,
         )
 
@@ -183,7 +210,14 @@ def scan_video(
     interval_selector = None
     sample_filter = None
     if dialogue_gaps_only_active and caption_timeline is not None:
-        sample_filter = lambda timestamp: not caption_timeline.is_dialogue_active(timestamp)
+        if dialogue_gaps is not None:
+            gap_starts = tuple(gap.start_seconds for gap in dialogue_gaps)
+
+            def sample_filter(timestamp: float) -> bool:
+                index = bisect_right(gap_starts, timestamp) - 1
+                return index >= 0 and timestamp < dialogue_gaps[index].end_seconds
+        else:
+            sample_filter = lambda timestamp: not caption_timeline.is_dialogue_active(timestamp)
     if caption_timeline is not None and settings.use_dialogue_optimization and scan_mode.name == "adaptive":
         priority_timestamps.extend(
             caption_timeline.quiet_gap_starts(
@@ -340,6 +374,7 @@ def scan_video(
         scene_detection=scene_detection_active,
         ocr_frames=reuse_cache.ocr_frames if reuse_cache is not None else processed_samples,
         reused_frames=reuse_cache.reused_frames if reuse_cache is not None else 0,
+        gap_report=dialogue_gaps is not None,
     )
     write_raw_json(
         raw_json,
@@ -375,6 +410,31 @@ def scan_video(
         raw_json,
         caption_timeline.path if caption_timeline else None,
     )
+
+
+def find_dialogue_gaps(
+    video_path: str | Path,
+    *,
+    settings: ScanSettings | None = None,
+) -> DialogueGapResult:
+    settings = settings or ScanSettings()
+    metadata = read_video_metadata(video_path)
+    start_seconds, end_seconds = _resolve_scan_range(metadata, settings)
+    if end_seconds is None:
+        raise ValueError("The video duration is unavailable; set an end time to export dialogue gaps.")
+    timeline = _load_caption_timeline(video_path, settings)
+    if timeline is None:
+        raise ValueError("Super Speed Run needs an English or Spanish SRT/VTT caption file.")
+    gaps = timeline.dialogue_gaps(start_seconds=start_seconds, end_seconds=end_seconds)
+    output_dir = create_output_dir(video_path, settings.output_root)
+    report_html, report_csv = write_dialogue_gap_reports(
+        output_dir,
+        metadata=metadata,
+        timeline=timeline,
+        gaps=gaps,
+        ocr_performed=False,
+    )
+    return DialogueGapResult(output_dir, metadata, timeline.path, gaps, report_html, report_csv)
 
 
 def validate_min_ocr_confidence(value: float) -> float:

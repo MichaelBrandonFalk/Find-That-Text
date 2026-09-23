@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.0
+
+- Built dialogue-free ranges from SRT/VTT cues before OCR; recognized music and sound-effect cues no longer block the default scan.
+- Added Super Speed Run to export dialogue-gap HTML and CSV without frame decoding or OCR.
+- Added the same gap timeline to normal scans with captions, plus a link from the OCR report.
+- Updated the Mac interface, CLI, README, and download page to explain the two workflows.
+
 ## 1.4.0
 
 - Added conservative OCR result reuse for near-identical sampled frames, with periodic fresh checks and a disable switch.

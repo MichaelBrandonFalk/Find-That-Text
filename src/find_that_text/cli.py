@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from find_that_text.ocr.engine import EmptyOCREngine
-from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, scan_video
+from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, find_dialogue_gaps, scan_video
 from find_that_text.util.timestamps import format_timestamp, parse_timestamp
 
 
@@ -67,6 +67,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Exercise video/report plumbing without loading PaddleOCR.",
     )
+    gaps = subparsers.add_parser("gaps", help="Export dialogue-free ranges without decoding frames or running OCR.")
+    gaps.add_argument("video", type=Path, help="Path to MOV, MP4, or M4V video.")
+    gaps.add_argument("--captions", type=Path, default=None, help="English or Spanish SRT/VTT dialogue captions.")
+    gaps.add_argument("--no-auto-captions", action="store_true", help="Do not find a matching caption sidecar.")
+    gaps.add_argument("--start", type=parse_timestamp, default=None)
+    gaps.add_argument("--end", type=parse_timestamp, default=None)
+    gaps.add_argument("--output", type=Path, default=None, help="Output root folder.")
     return parser
 
 
@@ -110,6 +117,21 @@ def main(argv: list[str] | None = None) -> int:
         print(f"CSV report:    {result.report_csv}")
         print(f"Raw JSON:      {result.raw_json}")
         print(f"Events:        {len(result.events)}")
+        return 0
+    if args.command == "gaps":
+        result = find_dialogue_gaps(
+            args.video,
+            settings=ScanSettings(
+                caption_path=args.captions,
+                auto_find_captions=not args.no_auto_captions,
+                start_seconds=args.start,
+                end_seconds=args.end,
+                output_root=args.output,
+            ),
+        )
+        print(f"Dialogue gaps: {len(result.gaps)}")
+        print(f"Timeline:      {result.report_html}")
+        print(f"CSV:           {result.report_csv}")
         return 0
     return 2
 

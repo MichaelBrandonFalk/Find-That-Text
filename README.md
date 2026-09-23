@@ -28,12 +28,15 @@ The app does not decide what is essential to the plot. It creates a short, ranke
 
 The two speed choices are independent. Turn off gap-only scanning to include text that appears during dialogue, or choose a closer frame interval under Advanced Settings. With no captions, the app scans the whole video every 23 frames. This supports workflows both before and after dialogue captions are created.
 
+To get dialogue-free timecodes without looking for screen text, select **Super Speed Run - dialogue gaps only** under Run. It requires an English or Spanish SRT/VTT file, reads video timing metadata, and writes `dialogue_gaps.html` and `dialogue_gaps.csv`. It does not decode video frames or run OCR. Use the regular **Screen-text scan** to find forced-text candidates.
+
 ## How Scanning Works
 
 Fastest mode is the default:
 
 - Check every 23rd source frame and send only those frames to OCR
-- With dialogue captions, OCR only sampled frames outside captioned dialogue (including a 0.15-second margin)
+- With dialogue captions, first build a dialogue-gap timeline, then OCR only sampled frames in those gaps (including a 0.15-second margin around speech)
+- Recognized music, lyrics marked with musical notes, and sound-effect-only cues count as scan time; cues mixing speech and sounds count as dialogue
 - With no captions, scan sampled frames across the full video
 - Reuse OCR results on near-identical sampled frames, with a fresh OCR pass after at most two reuses
 - Skip the full-video scene-change prepass
@@ -42,7 +45,7 @@ Fastest mode is the default:
 
 Nothing is removed solely because it receives a low relevance score. Every grouped event is included in one of three report sections, and the raw JSON preserves the underlying detections.
 
-Gap-only scanning can miss plot text shown while people speak, and sampling can miss very brief text. For broader coverage, turn off the gap-only checkbox, use Adaptive or a smaller custom frame interval, and optionally enable scene-change detection. Every-frame mode is intended for short ranges because a feature-length scan can take much longer. These controls can be changed separately. If you clear an automatically selected caption file, it will not be silently reselected for that scan.
+Gap-only scanning can miss plot text shown while people speak, and sampling can miss very brief text. Caption cue classification is heuristic: uncommon sound-effect wording or unmarked lyrics may still be treated as dialogue. For broader coverage, turn off the gap-only checkbox, use Adaptive or a smaller custom frame interval, and optionally enable scene-change detection. Every-frame mode is intended for short ranges because a feature-length scan can take much longer. These controls can be changed separately. If you clear an automatically selected caption file, it will not be silently reselected for that scan.
 
 OCR reuse is intentionally conservative: meaningful local pixel changes trigger a fresh OCR pass, and every third near-identical sample is refreshed. It is disabled in every-frame mode and when UHD tiling is enabled. The report shows analyzed and reused frame counts. Moving scenes may not benefit, so this is a speed aid rather than a guaranteed time reduction.
 
@@ -54,6 +57,9 @@ Each scan writes a folder containing:
 - `report.csv` - QC-friendly event summary with scores and reasons
 - `raw_detections.json` - every OCR detection and scan setting
 - `screenshots/` - clean and optional annotated evidence frames
+- `dialogue_gaps.html` and `dialogue_gaps.csv` - dialogue-free ranges when captions are supplied
+
+Super Speed Run writes only the two dialogue-gap files. It does not identify on-screen text.
 
 ## Performance Target
 
@@ -96,6 +102,7 @@ find-that-text scan "/path/to/movie.mov" --scan-during-dialogue
 find-that-text scan "/path/to/movie.mov" --mode adaptive --scene-detection
 find-that-text scan "/path/to/movie.mov" --no-ocr-reuse
 find-that-text scan "/path/to/movie.mov" --mode custom --custom-frame-step 7 --review-breadth 0.35
+find-that-text gaps "/path/to/movie.mov" --captions "/path/to/movie.en.srt"
 ```
 
 Release builds bundle the PP-OCRv6 small models. On first launch, the app copies those models into `~/Library/Application Support/Find That Text/PaddleX`; normal scans do not need internet access.

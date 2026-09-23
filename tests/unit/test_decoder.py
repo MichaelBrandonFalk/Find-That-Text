@@ -12,7 +12,7 @@ import numpy as np
 
 from find_that_text.video.decoder import iter_sampled_frames
 from find_that_text.ocr.engine import EmptyOCREngine
-from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, scan_video
+from find_that_text.scanner import ScanCancelled, ScanProgress, ScanSettings, find_dialogue_gaps, scan_video
 
 
 def _make_video(path: Path, *, seconds: int = 4, fps: int = 24, static: bool = False) -> None:
@@ -102,6 +102,59 @@ def test_disabled_auto_caption_discovery_scans_full_video(tmp_path: Path) -> Non
 
     assert result.caption_path is None
     assert progress[-1].frames_processed == 5
+
+
+def test_music_is_scanned_and_dialogue_gap_timeline_is_exported(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    captions = tmp_path / "clip.srt"
+    _make_video(video)
+    captions.write_text(
+        "1\n00:00:01,000 --> 00:00:03,000\nSpeaking\n\n"
+        "2\n00:00:03,000 --> 00:00:04,000\n[MUSIC]\n",
+        encoding="utf-8",
+    )
+    progress = []
+
+    result = scan_video(
+        video,
+        settings=ScanSettings(output_root=tmp_path / "reports"),
+        engine=EmptyOCREngine(),
+        progress_callback=progress.append,
+    )
+
+    assert progress[-1].frames_processed == 2
+    assert (result.output_dir / "dialogue_gaps.html").exists()
+    csv_text = (result.output_dir / "dialogue_gaps.csv").read_text(encoding="utf-8")
+    assert "00:00:00.000,00:00:00.850" in csv_text
+    assert "00:00:03.150" in csv_text
+    assert 'href="dialogue_gaps.html"' in result.report_html.read_text(encoding="utf-8")
+
+
+def test_super_speed_run_never_decodes_frames_or_loads_ocr(tmp_path: Path, monkeypatch) -> None:
+    video = tmp_path / "clip.mp4"
+    captions = tmp_path / "clip.srt"
+    _make_video(video)
+    captions.write_text("1\n00:00:01,000 --> 00:00:03,000\nSpeaking\n", encoding="utf-8")
+
+    def unexpected_call(*args, **kwargs):
+        raise AssertionError("Super Speed Run must not decode frames or run OCR")
+
+    monkeypatch.setattr("find_that_text.scanner.iter_sampled_frames", unexpected_call)
+    monkeypatch.setattr("find_that_text.scanner.PaddleOCREngine", unexpected_call)
+
+    result = find_dialogue_gaps(video, settings=ScanSettings(output_root=tmp_path / "gaps"))
+
+    assert len(result.gaps) == 2
+    assert result.report_csv.exists()
+    assert "No video frames were decoded and no OCR was run." in result.report_html.read_text(encoding="utf-8")
+
+
+def test_super_speed_run_requires_captions(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+
+    with pytest.raises(ValueError, match="needs an English or Spanish SRT/VTT"):
+        find_dialogue_gaps(video, settings=ScanSettings(output_root=tmp_path / "gaps"))
 
 
 def test_gap_only_scan_reports_progress_and_can_cancel_without_samples(tmp_path: Path) -> None:
