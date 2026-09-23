@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1
+
+- Ensure each eligible short dialogue gap gets a midpoint OCR sample when the regular frame cadence would otherwise miss the gap.
+
 ## 1.6.0
 
 - Added an adjustable minimum dialogue-free break, defaulting to 1.0 second, for OCR scans and gap-only exports.

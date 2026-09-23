@@ -184,6 +184,31 @@ def test_short_gaps_skip_video_decode_entirely(tmp_path: Path, monkeypatch) -> N
     assert "Scan Time" in result.report_html.read_text(encoding="utf-8")
 
 
+def test_eligible_one_second_gap_gets_a_midpoint_sample(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    captions = tmp_path / "clip.srt"
+    _make_video(video, seconds=4)
+    captions.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nHello\n\n"
+        "2\n00:00:02,000 --> 00:00:04,000\nWorld\n",
+        encoding="utf-8",
+    )
+    progress = []
+
+    result = scan_video(
+        video,
+        settings=ScanSettings(output_root=tmp_path / "reports"),
+        engine=EmptyOCREngine(),
+        progress_callback=progress.append,
+    )
+
+    assert progress[-1].frames_processed == 1
+    assert 1.5 <= progress[-1].current_seconds < 1.6
+    assert "00:00:01.150,00:00:01.850" in (
+        result.output_dir / "dialogue_gaps.csv"
+    ).read_text(encoding="utf-8")
+
+
 def test_gap_only_scan_reports_progress_and_can_cancel_without_samples(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     captions = tmp_path / "clip.srt"

@@ -218,15 +218,38 @@ def scan_video(
     cached_frames: dict[int, Path] = {}
     candidate_cache_dir = output_dir / ".candidate_frames"
     priority_timestamps = list(scene_change_times)
+    if dialogue_gaps_only_active and dialogue_gaps is not None:
+        guarantee_interval = (
+            settings.dialogue_interval_seconds
+            if scan_mode.name == "adaptive" and settings.use_dialogue_optimization
+            else sample_interval_seconds
+        )
+        priority_timestamps.extend(
+            (gap.start_seconds + gap.end_seconds) / 2
+            for gap in dialogue_gaps
+            if gap.end_seconds - gap.start_seconds <= guarantee_interval
+        )
     interval_selector = None
     sample_filter = None
     if dialogue_gaps_only_active and caption_timeline is not None:
         if dialogue_gaps is not None:
             gap_starts = tuple(gap.start_seconds for gap in dialogue_gaps)
+            short_gaps = {
+                index
+                for index, gap in enumerate(dialogue_gaps)
+                if gap.end_seconds - gap.start_seconds < sample_interval_seconds
+            }
+            sampled_short_gaps: set[int] = set()
 
             def sample_filter(timestamp: float) -> bool:
                 index = bisect_right(gap_starts, timestamp) - 1
-                return index >= 0 and timestamp < dialogue_gaps[index].end_seconds
+                if index < 0 or timestamp >= dialogue_gaps[index].end_seconds:
+                    return False
+                if index in short_gaps:
+                    if index in sampled_short_gaps:
+                        return False
+                    sampled_short_gaps.add(index)
+                return True
         else:
             sample_filter = lambda timestamp: not caption_timeline.is_dialogue_active(timestamp)
     if caption_timeline is not None and settings.use_dialogue_optimization and scan_mode.name == "adaptive":

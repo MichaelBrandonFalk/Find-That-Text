@@ -37,6 +37,7 @@ To get dialogue-free timecodes without looking for screen text, select **Super S
 Fastest mode is the default:
 
 - Check every 23rd source frame and send only those frames to OCR
+- Add one midpoint check in each eligible dialogue gap shorter than that sampling interval, so a one-second break is not missed by cadence alone
 - With dialogue captions, first build a dialogue-gap timeline, then OCR only sampled frames in those gaps (including a 0.15-second margin around speech)
 - Recognized music, lyrics marked with musical notes, and sound-effect-only cues count as scan time; cues mixing speech and sounds count as dialogue
 - With no captions, scan sampled frames across the full video
