@@ -11,7 +11,7 @@
   <header class="hero">
     <nav>
       <strong>Find That Text</strong>
-      <span>v1.4.0</span>
+      <span>v1.5.0</span>
     </nav>
     <section class="hero-content">
       <p class="kicker">Forced text review for Apple Silicon</p>
@@ -31,15 +31,15 @@
       <div class="workflow-intro">
         <p class="section-label">Best route for a feature</p>
         <h2>A smooth first run</h2>
-        <p>The fastest scan checks every 23rd frame and, with English or Spanish dialogue captions, inspects only the gaps. Those two choices are separate settings, so you can widen coverage whenever a project needs it.</p>
+        <p>The default scan checks every 23rd frame and, with English or Spanish captions, inspects dialogue-free gaps. Music and sound-effect-only cues remain scan time. Frame interval and gap-only scanning are separate settings, so you can widen coverage when needed.</p>
       </div>
       <ol class="workflow-steps">
         <li><strong>Choose your video.</strong> Add an SRT or VTT dialogue file if you have one. A matching caption file beside the video is picked up automatically.</li>
-        <li><strong>Keep the defaults.</strong> Leave <em>Fastest - every 23 frames</em> and <em>Scan only where dialogue captions are absent</em> selected. Leave the end time blank for the full movie.</li>
+        <li><strong>Keep the defaults.</strong> Leave <em>Screen-text scan</em>, <em>Fastest - every 23 frames</em>, and <em>Scan only where dialogue captions are absent</em> selected. Leave the end time blank for the full movie.</li>
         <li><strong>Try a short range first if you like.</strong> Set an end time around ten minutes to check results, then clear it for the full scan. A late range jumps to that point instead of decoding from the start.</li>
         <li><strong>Review the strongest matches first.</strong> Open the report's Likely Forced Text section, then Needs Review. Background graphics and credits stay available, but out of your way.</li>
       </ol>
-      <p class="workflow-note">Without captions, Fastest checks the full video every 23 frames. Nearly identical sampled frames may reuse an OCR result, with regular fresh checks. Gap-only scanning can miss text shown during speech; turn it off for broader coverage, or choose Adaptive, a custom interval, or scene detection for a closer rescan. Scanning a two-hour feature in two hours or less is a target, not a guarantee.</p>
+      <p class="workflow-note">Need only a list of dialogue-free timecodes? Choose <strong>Super Speed Run - dialogue gaps only</strong>. With SRT/VTT captions, it exports an HTML timeline and CSV without decoding frames or running OCR; it does not find screen text. Without captions, the default scan checks the full video every 23 frames. Gap-only scanning can miss text shown during speech, and unusual caption labels may need review. Scanning a two-hour feature in two hours or less is a target, not a guarantee.</p>
     </section>
     <section class="outputs">
       <div>
@@ -50,6 +50,7 @@
         <li>Ranked candidate report</li>
         <li>Evidence screenshots</li>
         <li>CSV and raw OCR audit data</li>
+        <li>Dialogue-gap timeline and CSV when captions are supplied</li>
       </ul>
     </section>
     <section class="privacy">
