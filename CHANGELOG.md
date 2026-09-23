@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.1
+
+- Save report folders under Downloads by default instead of Desktop.
+- Added a persistent report-folder picker and a one-click reset to Downloads in the Mac app.
+
 ## 1.7.0
 
 - Added a filterable spreadsheet report with direct links to clean and optional annotated evidence screenshots.

@@ -4,7 +4,7 @@ import subprocess
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtCore import QSettings, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -117,6 +117,12 @@ class MainWindow(QMainWindow):
         self.auto_find_captions = True
         self.output_dir: Path | None = None
         self.report_path: Path | None = None
+        self.preferences = QSettings("org.findthattext", "Find That Text")
+        saved_output_root = self.preferences.value("reportRoot", "", type=str)
+        self.output_root = Path(saved_output_root) if saved_output_root else default_reports_root()
+        if saved_output_root and not self.output_root.is_dir():
+            self.output_root = default_reports_root()
+            self.preferences.remove("reportRoot")
         self.thread: ScanThread | None = None
         self._build_ui()
 
@@ -214,6 +220,20 @@ class MainWindow(QMainWindow):
         range_form.addWidget(self.end_time_input, 1, 1)
         layout.addLayout(range_form)
 
+        output_row = QHBoxLayout()
+        output_row.addWidget(QLabel("Save reports in"))
+        self.output_path = QLineEdit(str(self.output_root))
+        self.output_path.setReadOnly(True)
+        self.output_path.setToolTip(str(self.output_root))
+        output_row.addWidget(self.output_path, 1)
+        self.choose_output_button = QPushButton("Choose Folder")
+        self.choose_output_button.clicked.connect(self.choose_output_root)
+        output_row.addWidget(self.choose_output_button)
+        self.reset_output_button = QPushButton("Use Downloads")
+        self.reset_output_button.clicked.connect(self.reset_output_root)
+        output_row.addWidget(self.reset_output_button)
+        layout.addLayout(output_row)
+
         self.advanced_toggle = QPushButton("Show Advanced Settings")
         self.advanced_toggle.setCheckable(True)
         self.advanced_toggle.toggled.connect(self._toggle_advanced)
@@ -260,9 +280,6 @@ class MainWindow(QMainWindow):
         advanced_form.addWidget(self.scene_detection_check, 4, 1)
         advanced_form.addWidget(self.reuse_check, 5, 1)
         advanced_form.addWidget(self.annotated_check, 6, 1)
-        advanced_form.addWidget(QLabel("Output"), 7, 0)
-        self.output_label = QLabel(str(default_reports_root()))
-        advanced_form.addWidget(self.output_label, 7, 1)
         self.advanced_group.setVisible(False)
         layout.addWidget(self.advanced_group)
 
@@ -355,6 +372,22 @@ class MainWindow(QMainWindow):
         if filename:
             self.set_caption_path(Path(filename), auto_detected=False)
 
+    def choose_output_root(self) -> None:
+        directory = QFileDialog.getExistingDirectory(self, "Choose Reports Folder", str(self.output_root))
+        if directory:
+            self.output_root = Path(directory)
+            self.preferences.setValue("reportRoot", str(self.output_root))
+            self._update_output_path()
+
+    def reset_output_root(self) -> None:
+        self.output_root = default_reports_root()
+        self.preferences.remove("reportRoot")
+        self._update_output_path()
+
+    def _update_output_path(self) -> None:
+        self.output_path.setText(str(self.output_root))
+        self.output_path.setToolTip(str(self.output_root))
+
     def set_video_path(self, path: Path) -> None:
         self.video_path = path
         self.auto_find_captions = True
@@ -412,6 +445,7 @@ class MainWindow(QMainWindow):
             enable_scene_detection=self.scene_detection_check.isChecked(),
             reuse_unchanged_frames=self.reuse_check.isChecked(),
             save_annotated_screenshots=self.annotated_check.isChecked(),
+            output_root=self.output_root,
         )
         self.thread = ScanThread(self.video_path, settings)
         self.thread.progressChanged.connect(self.update_progress)

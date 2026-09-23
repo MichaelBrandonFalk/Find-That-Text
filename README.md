@@ -65,6 +65,8 @@ Each scan writes a folder containing:
 - `screenshots/` - clean and optional annotated evidence frames
 - `dialogue_gaps.html` and `dialogue_gaps.csv` - dialogue-free ranges when captions are supplied
 
+By default, report folders are created in `~/Downloads/Find That Text Reports`. Use **Choose Folder** in the app to pick another location, or **Use Downloads** to restore the default. The choice is remembered for future runs, including Super Speed Run. The CLI uses the same default and accepts `--output` to choose another folder.
+
 The HTML report shows elapsed scan time, and `raw_detections.json` records it in seconds. The app also shows elapsed time when a scan completes.
 Click an evidence thumbnail or **Open screenshot** in the HTML report, or **Open frame** in `report.xlsx`, to view the saved frame without opening the film. Keep the entire report folder together when moving it: spreadsheet links point to files in its `screenshots/` subfolder. A CSV opened by itself contains screenshot paths, not clickable links.
 

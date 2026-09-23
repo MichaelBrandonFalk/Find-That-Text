@@ -13,10 +13,7 @@ def safe_stem(path: str | Path) -> str:
 
 
 def default_reports_root() -> Path:
-    desktop = Path.home() / "Desktop"
-    if desktop.exists():
-        return desktop / "Find That Text Reports"
-    return Path.home() / "Find That Text Reports"
+    return Path.home() / "Downloads" / "Find That Text Reports"
 
 
 def create_output_dir(video_path: str | Path, root: str | Path | None = None) -> Path:
