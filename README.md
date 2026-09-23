@@ -59,12 +59,14 @@ OCR reuse is intentionally conservative: meaningful local pixel changes trigger 
 Each scan writes a folder containing:
 
 - `report.html` - ranked and searchable forced-text candidate report
+- `report.xlsx` - filterable spreadsheet with clickable links to evidence screenshots
 - `report.csv` - QC-friendly event summary with scores and reasons
 - `raw_detections.json` - every OCR detection and scan setting
 - `screenshots/` - clean and optional annotated evidence frames
 - `dialogue_gaps.html` and `dialogue_gaps.csv` - dialogue-free ranges when captions are supplied
 
 The HTML report shows elapsed scan time, and `raw_detections.json` records it in seconds. The app also shows elapsed time when a scan completes.
+Click an evidence thumbnail or **Open screenshot** in the HTML report, or **Open frame** in `report.xlsx`, to view the saved frame without opening the film. Keep the entire report folder together when moving it: spreadsheet links point to files in its `screenshots/` subfolder. A CSV opened by itself contains screenshot paths, not clickable links.
 
 Super Speed Run writes only the two dialogue-gap files. It does not identify on-screen text.
 

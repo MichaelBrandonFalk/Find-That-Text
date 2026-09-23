@@ -118,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Report folder: {result.output_dir}")
         print(f"HTML report:   {result.report_html}")
         print(f"CSV report:    {result.report_csv}")
+        print(f"Excel report:  {result.report_xlsx}")
         print(f"Raw JSON:      {result.raw_json}")
         print(f"Events:        {len(result.events)}")
         print(f"Scan time:     {format_timestamp(result.elapsed_seconds)}")

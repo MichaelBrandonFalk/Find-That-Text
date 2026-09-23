@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.0
+
+- Added a filterable spreadsheet report with direct links to clean and optional annotated evidence screenshots.
+- Made screenshot links explicit in the HTML report and opened that report directly from the Mac app.
+- Kept CSV and raw JSON exports unchanged for existing QC workflows.
+
 ## 1.6.1
 
 - Ensure each eligible short dialogue gap gets a midpoint OCR sample when the regular frame cadence would otherwise miss the gap.

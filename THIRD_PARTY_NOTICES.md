@@ -64,3 +64,9 @@ This file summarizes the notable third-party components selected for the initial
 - Code license: Apache License 2.0.
 - Data license: Creative Commons Attribution-ShareAlike 4.0; see the bundled package license and project acknowledgements.
 - Use: Offline English and Spanish word-frequency checks for OCR relevance ranking.
+
+## XlsxWriter
+
+- Project: https://github.com/jmcnamara/XlsxWriter
+- License: BSD-2-Clause.
+- Use: Spreadsheet reports with clickable evidence-frame links.

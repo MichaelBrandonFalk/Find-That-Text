@@ -83,6 +83,7 @@ def write_html_report(
     .likely .score {{ color: var(--likely); }}
     .review .score {{ color: var(--review); }}
     img.thumb {{ width: 160px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 5px; border: 1px solid var(--line); }}
+    .evidence-link {{ display: block; margin-top: 4px; color: #165ea8; font-weight: 650; white-space: nowrap; }}
     .empty {{ padding: 24px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); }}
     @media (max-width: 720px) {{ .summary {{ grid-template-columns: 1fr; }} header, main {{ padding-left: 18px; padding-right: 18px; }} }}
   </style>
@@ -113,6 +114,7 @@ def write_html_report(
       <div><strong>OCR Work</strong><br>{ocr_frames} frames analyzed, {reused_frames} reused</div>
       <div><strong>Text Strictness</strong><br>Minimum confidence {min_ocr_confidence:.0%}</div>
       <div><strong>Application Version</strong><br>{escape(__version__)}</div>
+      <div><strong>Review Files</strong><br><a href="report.xlsx">Spreadsheet</a> | <a href="report.csv">CSV</a></div>
       <div><strong>Scan Date</strong><br>{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</div>
     </section>
   </header>
@@ -168,8 +170,11 @@ def _event_row(event: TextEvent) -> str:
     thumb = ""
     if event.screenshot:
         thumb = (
-            f'<a href="{escape(event.screenshot)}"><img class="thumb" '
-            f'src="{escape(event.screenshot)}" alt="Evidence frame"></a>'
+            f'<a href="{escape(event.screenshot, quote=True)}" target="_blank" rel="noopener">'
+            f'<img class="thumb" src="{escape(event.screenshot, quote=True)}" '
+            f'alt="Evidence frame for event {event.event_id}"></a>'
+            f'<a class="evidence-link" href="{escape(event.screenshot, quote=True)}" '
+            f'target="_blank" rel="noopener">Open screenshot</a>'
         )
     return f"""<tr>
       <td>{format_timestamp(event.start_seconds)}</td>

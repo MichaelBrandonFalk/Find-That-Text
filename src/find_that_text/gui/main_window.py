@@ -116,6 +116,7 @@ class MainWindow(QMainWindow):
         self.caption_path: Path | None = None
         self.auto_find_captions = True
         self.output_dir: Path | None = None
+        self.report_path: Path | None = None
         self.thread: ScanThread | None = None
         self._build_ui()
 
@@ -293,9 +294,9 @@ class MainWindow(QMainWindow):
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self.cancel_scan)
-        self.open_output_button = QPushButton("Open Report Folder")
+        self.open_output_button = QPushButton("Open Report")
         self.open_output_button.setEnabled(False)
-        self.open_output_button.clicked.connect(self.open_output_folder)
+        self.open_output_button.clicked.connect(self.open_report)
         buttons.addWidget(self.open_output_button)
         buttons.addWidget(self.cancel_button)
         buttons.addWidget(self.scan_button)
@@ -444,6 +445,7 @@ class MainWindow(QMainWindow):
 
     def scan_finished(self, result: object) -> None:
         self.output_dir = result.output_dir
+        self.report_path = result.report_html
         self.progress.setValue(1000)
         if isinstance(result, DialogueGapResult):
             self.status_label.setText(
@@ -472,9 +474,9 @@ class MainWindow(QMainWindow):
         self.cancel_button.setEnabled(False)
         self.status_label.setText("Scan cancelled")
 
-    def open_output_folder(self) -> None:
-        if self.output_dir:
-            subprocess.run(["open", str(self.output_dir)], check=False)
+    def open_report(self) -> None:
+        if self.report_path:
+            subprocess.run(["open", str(self.report_path)], check=False)
 
     def _toggle_advanced(self, checked: bool) -> None:
         self.advanced_group.setVisible(checked)

@@ -177,6 +177,7 @@ def test_short_gaps_skip_video_decode_entirely(tmp_path: Path, monkeypatch) -> N
     result = scan_video(video, settings=ScanSettings(output_root=tmp_path / "reports"), engine=EmptyOCREngine())
 
     assert result.events == []
+    assert result.report_xlsx.is_file()
     assert result.elapsed_seconds >= 0
     scan = json.loads(result.raw_json.read_text(encoding="utf-8"))["scan"]
     assert scan["minimum_dialogue_gap_seconds"] == 1.0

@@ -22,6 +22,7 @@ from find_that_text.reports.screenshots import (
     remove_candidate_cache,
     save_cached_event_screenshots,
 )
+from find_that_text.reports.xlsx_report import write_xlsx_report
 from find_that_text.tracking.events import OCRDetection, TextEvent
 from find_that_text.tracking.matcher import TrackingConfig, track_detections
 from find_that_text.tracking.moments import group_screen_text_moments
@@ -102,6 +103,7 @@ class ScanResult:
     report_html: Path
     report_csv: Path
     raw_json: Path
+    report_xlsx: Path
     caption_path: Path | None = None
     elapsed_seconds: float = 0.0
 
@@ -408,8 +410,10 @@ def scan_video(
 
     report_csv = output_dir / "report.csv"
     report_html = output_dir / "report.html"
+    report_xlsx = output_dir / "report.xlsx"
     raw_json = output_dir / "raw_detections.json"
     write_csv_report(report_csv, events)
+    write_xlsx_report(report_xlsx, events)
     write_html_report(
         report_html,
         events=events,
@@ -466,6 +470,7 @@ def scan_video(
         report_html,
         report_csv,
         raw_json,
+        report_xlsx,
         caption_timeline.path if caption_timeline else None,
         elapsed_seconds,
     )

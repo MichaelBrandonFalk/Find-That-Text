@@ -11,7 +11,7 @@
   <header class="hero">
     <nav>
       <strong>Find That Text</strong>
-      <span>v1.6.1</span>
+        <span>v1.7.0</span>
     </nav>
     <section class="hero-content">
       <p class="kicker">Forced text review for Apple Silicon</p>
@@ -37,7 +37,7 @@
         <li><strong>Choose your video.</strong> Add an SRT or VTT dialogue file if you have one. A matching caption file beside the video is picked up automatically.</li>
         <li><strong>Keep the defaults.</strong> Leave <em>Screen-text scan</em>, <em>Fastest - every 23 frames</em>, and <em>Scan only where dialogue captions are absent</em> selected. The minimum dialogue-free break is 1.0 second; leave the end time blank for the full movie.</li>
         <li><strong>Try a short range first if you like.</strong> Set an end time around ten minutes to check results, then clear it for the full scan. A late range jumps to that point instead of decoding from the start.</li>
-        <li><strong>Review the strongest matches first.</strong> Open the report's Likely Forced Text section, then Needs Review. Background graphics and credits stay available, but out of your way.</li>
+        <li><strong>Review the strongest matches first.</strong> Open the report's Likely Forced Text section, then Needs Review. Click a screenshot to inspect its saved frame without opening the film. Background graphics and credits stay available, but out of your way.</li>
       </ol>
       <p class="workflow-note">Need only dialogue-free timecodes? Choose <strong>Super Speed Run - dialogue gaps only</strong>. With SRT/VTT captions, it exports an HTML timeline and CSV without decoding frames or running OCR; it does not find screen text. Both runs use the adjustable minimum break setting. Without captions, the default OCR scan checks the full video every 23 frames. Gap-only scanning can miss text shown during speech, and unusual caption labels may need review. Scanning a two-hour feature in two hours or less is a target, not a guarantee.</p>
     </section>
@@ -48,7 +48,7 @@
       </div>
       <ul>
         <li>Ranked candidate report</li>
-        <li>Evidence screenshots</li>
+        <li>Clickable evidence screenshots in the HTML and spreadsheet reports</li>
         <li>CSV and raw OCR audit data</li>
         <li>Dialogue-gap timeline and CSV when captions are supplied</li>
       </ul>
