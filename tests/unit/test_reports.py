@@ -46,6 +46,8 @@ def test_reports_write_expected_files(tmp_path: Path) -> None:
         min_ocr_confidence=0.75,
         ocr_frames=4,
         reused_frames=2,
+        elapsed_seconds=74.2,
+        minimum_dialogue_gap_seconds=1.0,
     )
     write_raw_json(
         tmp_path / "raw_detections.json",
@@ -57,6 +59,8 @@ def test_reports_write_expected_files(tmp_path: Path) -> None:
         min_ocr_confidence=0.75,
         ocr_frames=4,
         reused_frames=2,
+        elapsed_seconds=74.2,
+        minimum_dialogue_gap_seconds=1.0,
     )
 
     assert "HELLO WORLD" in (tmp_path / "report.csv").read_text(encoding="utf-8")
@@ -68,8 +72,12 @@ def test_reports_write_expected_files(tmp_path: Path) -> None:
     assert "Background / Credits / Repeated Graphics" in html
     assert "Minimum confidence 75%" in html
     assert "4 frames analyzed, 2 reused" in html
+    assert "Scan Time</strong><br>00:01:14.200" in html
+    assert "Minimum Dialogue Gap</strong><br>1 s" in html
     assert '"detections"' in raw_json
     assert '"minimum_ocr_confidence": 0.75' in raw_json
     assert '"schema_version": 2' in raw_json
     assert '"ocr_frames_analyzed": 4' in raw_json
     assert '"ocr_frames_reused": 2' in raw_json
+    assert '"elapsed_seconds": 74.2' in raw_json
+    assert '"minimum_dialogue_gap_seconds": 1.0' in raw_json

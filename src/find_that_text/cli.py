@@ -49,6 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--captions", type=Path, default=None, help="Optional English or Spanish SRT/VTT dialogue captions.")
     scan.add_argument("--no-auto-captions", action="store_true", help="Do not find a matching SRT/VTT sidecar automatically.")
     scan.add_argument("--scan-during-dialogue", action="store_true", help="Scan sampled frames even during captioned dialogue.")
+    scan.add_argument("--minimum-gap-seconds", type=float, default=1.0, help="Skip caption-free breaks shorter than this many seconds (default: 1.0).")
     scan.add_argument("--no-dialogue-optimization", action="store_true", help="Disable gap-aware cadence in adaptive mode.")
     scan.add_argument("--no-ocr-reuse", action="store_true", help="Run OCR on every sampled frame, even when nearly identical.")
     scene = scan.add_mutually_exclusive_group()
@@ -71,6 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
     gaps.add_argument("video", type=Path, help="Path to MOV, MP4, or M4V video.")
     gaps.add_argument("--captions", type=Path, default=None, help="English or Spanish SRT/VTT dialogue captions.")
     gaps.add_argument("--no-auto-captions", action="store_true", help="Do not find a matching caption sidecar.")
+    gaps.add_argument("--minimum-gap-seconds", type=float, default=1.0, help="Exclude caption-free breaks shorter than this many seconds (default: 1.0).")
     gaps.add_argument("--start", type=parse_timestamp, default=None)
     gaps.add_argument("--end", type=parse_timestamp, default=None)
     gaps.add_argument("--output", type=Path, default=None, help="Output root folder.")
@@ -91,6 +93,7 @@ def main(argv: list[str] | None = None) -> int:
             caption_path=args.captions,
             auto_find_captions=not args.no_auto_captions,
             only_dialogue_gaps=not args.scan_during_dialogue,
+            minimum_dialogue_gap_seconds=args.minimum_gap_seconds,
             use_dialogue_optimization=not args.no_dialogue_optimization,
             enable_scene_detection=args.scene_detection,
             reuse_unchanged_frames=not args.no_ocr_reuse,
@@ -117,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"CSV report:    {result.report_csv}")
         print(f"Raw JSON:      {result.raw_json}")
         print(f"Events:        {len(result.events)}")
+        print(f"Scan time:     {format_timestamp(result.elapsed_seconds)}")
         return 0
     if args.command == "gaps":
         result = find_dialogue_gaps(
@@ -126,12 +130,14 @@ def main(argv: list[str] | None = None) -> int:
                 auto_find_captions=not args.no_auto_captions,
                 start_seconds=args.start,
                 end_seconds=args.end,
+                minimum_dialogue_gap_seconds=args.minimum_gap_seconds,
                 output_root=args.output,
             ),
         )
         print(f"Dialogue gaps: {len(result.gaps)}")
         print(f"Timeline:      {result.report_html}")
         print(f"CSV:           {result.report_csv}")
+        print(f"Run time:      {format_timestamp(result.elapsed_seconds)}")
         return 0
     return 2
 

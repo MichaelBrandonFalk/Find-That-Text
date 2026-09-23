@@ -57,3 +57,10 @@ This file summarizes the notable third-party components selected for the initial
 - Project: https://github.com/Breakthrough/PySceneDetect
 - License: BSD-3-Clause
 - Use: Adaptive scene-cut and fade detection for priority sampling.
+
+## wordfreq
+
+- Project: https://github.com/rspeer/wordfreq
+- Code license: Apache License 2.0.
+- Data license: Creative Commons Attribution-ShareAlike 4.0; see the bundled package license and project acknowledgements.
+- Use: Offline English and Spanish word-frequency checks for OCR relevance ranking.

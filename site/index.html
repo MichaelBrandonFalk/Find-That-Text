@@ -11,7 +11,7 @@
   <header class="hero">
     <nav>
       <strong>Find That Text</strong>
-      <span>v1.5.0</span>
+      <span>v1.6.0</span>
     </nav>
     <section class="hero-content">
       <p class="kicker">Forced text review for Apple Silicon</p>
@@ -31,15 +31,15 @@
       <div class="workflow-intro">
         <p class="section-label">Best route for a feature</p>
         <h2>A smooth first run</h2>
-        <p>The default scan checks every 23rd frame and, with English or Spanish captions, inspects dialogue-free gaps. Music and sound-effect-only cues remain scan time. Frame interval and gap-only scanning are separate settings, so you can widen coverage when needed.</p>
+        <p>The default scan checks every 23rd frame and, with English or Spanish captions, inspects dialogue-free breaks of at least one second. Music and sound-effect-only cues remain scan time. Frame interval and minimum break length can be adjusted independently.</p>
       </div>
       <ol class="workflow-steps">
         <li><strong>Choose your video.</strong> Add an SRT or VTT dialogue file if you have one. A matching caption file beside the video is picked up automatically.</li>
-        <li><strong>Keep the defaults.</strong> Leave <em>Screen-text scan</em>, <em>Fastest - every 23 frames</em>, and <em>Scan only where dialogue captions are absent</em> selected. Leave the end time blank for the full movie.</li>
+        <li><strong>Keep the defaults.</strong> Leave <em>Screen-text scan</em>, <em>Fastest - every 23 frames</em>, and <em>Scan only where dialogue captions are absent</em> selected. The minimum dialogue-free break is 1.0 second; leave the end time blank for the full movie.</li>
         <li><strong>Try a short range first if you like.</strong> Set an end time around ten minutes to check results, then clear it for the full scan. A late range jumps to that point instead of decoding from the start.</li>
         <li><strong>Review the strongest matches first.</strong> Open the report's Likely Forced Text section, then Needs Review. Background graphics and credits stay available, but out of your way.</li>
       </ol>
-      <p class="workflow-note">Need only a list of dialogue-free timecodes? Choose <strong>Super Speed Run - dialogue gaps only</strong>. With SRT/VTT captions, it exports an HTML timeline and CSV without decoding frames or running OCR; it does not find screen text. Without captions, the default scan checks the full video every 23 frames. Gap-only scanning can miss text shown during speech, and unusual caption labels may need review. Scanning a two-hour feature in two hours or less is a target, not a guarantee.</p>
+      <p class="workflow-note">Need only dialogue-free timecodes? Choose <strong>Super Speed Run - dialogue gaps only</strong>. With SRT/VTT captions, it exports an HTML timeline and CSV without decoding frames or running OCR; it does not find screen text. Both runs use the adjustable minimum break setting. Without captions, the default OCR scan checks the full video every 23 frames. Gap-only scanning can miss text shown during speech, and unusual caption labels may need review. Scanning a two-hour feature in two hours or less is a target, not a guarantee.</p>
     </section>
     <section class="outputs">
       <div>
@@ -57,6 +57,7 @@
       <p class="section-label">Before or after dialogue captions</p>
       <h2>Captions help, but they are never required.</h2>
       <p>Use an English or Spanish SRT/VTT dialogue file for the fastest gap-only scan, or scan the full video at the same 23-frame interval before the rest of the localization workflow begins.</p>
+      <p>Reports prioritize readable words on signs, messages, and screens, even when other OCR on the same frame is messy. Dense text alone is not treated as credits. Each run also shows how long processing took.</p>
     </section>
     <section class="technology">
       <p class="section-label">Under the hood</p>
@@ -66,6 +67,7 @@
         <li><strong>OCR</strong><a href="https://github.com/PaddlePaddle/PaddleOCR">PaddleOCR 3.7.0</a> with PP-OCRv6 small models</li>
         <li><strong>Optional scene detection</strong><a href="https://github.com/Breakthrough/PySceneDetect">PySceneDetect 0.7.1</a></li>
         <li><strong>Mac interface</strong><a href="https://doc.qt.io/qtforpython-6/">PySide6 6.11.2</a></li>
+        <li><strong>Word ranking</strong><a href="https://github.com/rspeer/wordfreq">wordfreq 3.1.1</a> (offline English and Spanish lists)</li>
       </ul>
     </section>
     <section class="install">

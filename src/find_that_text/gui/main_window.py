@@ -174,6 +174,19 @@ class MainWindow(QMainWindow):
         self.gap_only_check.setChecked(True)
         self.gap_only_check.setToolTip("Fastest with SRT/VTT captions; text shown during dialogue may be missed.")
         caption_layout.addWidget(self.gap_only_check)
+        gap_row = QHBoxLayout()
+        gap_row.addWidget(QLabel("Minimum dialogue-free break"))
+        self.minimum_gap_slider = QSlider(Qt.Orientation.Horizontal)
+        self.minimum_gap_slider.setRange(0, 50)
+        self.minimum_gap_slider.setValue(10)
+        self.minimum_gap_slider.setTickInterval(5)
+        self.minimum_gap_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.minimum_gap_slider.setToolTip("Only scan caption-free breaks at least this long, before speech margins.")
+        gap_row.addWidget(self.minimum_gap_slider, 1)
+        self.minimum_gap_value = QLabel("1.0 s")
+        self.minimum_gap_value.setMinimumWidth(42)
+        gap_row.addWidget(self.minimum_gap_value)
+        caption_layout.addLayout(gap_row)
         layout.addWidget(caption_group)
 
         run_row = QHBoxLayout()
@@ -255,9 +268,12 @@ class MainWindow(QMainWindow):
         self.mode_combo.currentIndexChanged.connect(self._sync_scan_mode_controls)
         self.run_combo.currentIndexChanged.connect(self._sync_run_controls)
         self.breadth_slider.valueChanged.connect(self._update_breadth_label)
+        self.minimum_gap_slider.valueChanged.connect(self._update_minimum_gap_label)
+        self.gap_only_check.toggled.connect(self._sync_caption_controls)
         self._sync_scan_mode_controls()
         self._sync_caption_controls()
         self._update_breadth_label(self.breadth_slider.value())
+        self._update_minimum_gap_label(self.minimum_gap_slider.value())
 
         self.progress = QProgressBar()
         self.progress.setRange(0, 1000)
@@ -391,6 +407,7 @@ class MainWindow(QMainWindow):
             caption_path=self.caption_path,
             auto_find_captions=self.auto_find_captions,
             only_dialogue_gaps=self.gap_only_check.isChecked(),
+            minimum_dialogue_gap_seconds=self.minimum_gap_slider.value() / 10.0,
             enable_scene_detection=self.scene_detection_check.isChecked(),
             reuse_unchanged_frames=self.reuse_check.isChecked(),
             save_annotated_screenshots=self.annotated_check.isChecked(),
@@ -429,11 +446,15 @@ class MainWindow(QMainWindow):
         self.output_dir = result.output_dir
         self.progress.setValue(1000)
         if isinstance(result, DialogueGapResult):
-            self.status_label.setText(f"Complete - {len(result.gaps)} dialogue gaps; no OCR run")
+            self.status_label.setText(
+                f"Complete in {format_timestamp(result.elapsed_seconds)} - "
+                f"{len(result.gaps)} dialogue gaps; no OCR run"
+            )
         else:
             counts = bucket_counts(result.events)
             self.status_label.setText(
-                f"Complete - {counts[LIKELY_FORCED_TEXT]} likely forced text, "
+                f"Complete in {format_timestamp(result.elapsed_seconds)} - "
+                f"{counts[LIKELY_FORCED_TEXT]} likely forced text, "
                 f"{counts[NEEDS_REVIEW]} to review"
             )
         self.scan_button.setEnabled(True)
@@ -465,16 +486,24 @@ class MainWindow(QMainWindow):
         self.custom_frame_step.setEnabled(self.mode_combo.currentData() == "custom")
         self.reuse_check.setEnabled(self.mode_combo.currentData() != "advanced")
 
-    def _sync_caption_controls(self) -> None:
+    def _sync_caption_controls(self, _checked: bool = False) -> None:
         self.run_combo.model().item(1).setEnabled(self.caption_path is not None)
         if self.caption_path is None and self.run_combo.currentData():
             self.run_combo.setCurrentIndex(0)
+        self.minimum_gap_slider.setEnabled(
+            self.caption_path is not None
+            and (bool(self.run_combo.currentData()) or self.gap_only_check.isChecked())
+        )
 
     def _sync_run_controls(self, _index: int = -1) -> None:
         gaps_only = bool(self.run_combo.currentData())
         self.scan_button.setText("Find Dialogue Gaps" if gaps_only else "Scan Video")
         self.gap_only_check.setEnabled(not gaps_only)
         self.advanced_group.setEnabled(not gaps_only)
+        self._sync_caption_controls()
+
+    def _update_minimum_gap_label(self, value: int) -> None:
+        self.minimum_gap_value.setText(f"{value / 10:.1f} s")
 
     def _update_breadth_label(self, value: int) -> None:
         if value <= 25:

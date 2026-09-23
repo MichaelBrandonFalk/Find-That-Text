@@ -26,6 +26,8 @@ The app does not decide what is essential to the plot. It creates a short, ranke
 4. Scan the full video or enter an optional start/end range.
 5. Review **Likely Forced Text** first, then **Needs Review**. Background graphics and credits remain available in a collapsed section.
 
+With captions, the default **Minimum dialogue-free break** is 1.0 second. Shorter breaks are skipped before OCR; the adjustable slider runs from 0 to 5 seconds in 0.1-second steps. The threshold measures the caption-free break before the 0.15-second speech margins. The same threshold applies to Super Speed Run's exported timecodes. With no captions, this setting has no effect.
+
 The two speed choices are independent. Turn off gap-only scanning to include text that appears during dialogue, or choose a closer frame interval under Advanced Settings. With no captions, the app scans the whole video every 23 frames. This supports workflows both before and after dialogue captions are created.
 
 To get dialogue-free timecodes without looking for screen text, select **Super Speed Run - dialogue gaps only** under Run. It requires an English or Spanish SRT/VTT file, reads video timing metadata, and writes `dialogue_gaps.html` and `dialogue_gaps.csv`. It does not decode video frames or run OCR. Use the regular **Screen-text scan** to find forced-text candidates.
@@ -45,6 +47,8 @@ Fastest mode is the default:
 
 Nothing is removed solely because it receives a low relevance score. Every grouped event is included in one of three report sections, and the raw JSON preserves the underlying detections.
 
+Readable English or Spanish words now carry more weight in ranking, even if some OCR on the same screen is garbled. A high detector confidence or many letters alone cannot put text with no common recognizable words in **Likely Forced Text**. Proper names, unusual typography, and less-common languages may still appear in **Needs Review**. A busy screen is no longer assumed to be rolling credits just because many text detections appear nearby.
+
 Gap-only scanning can miss plot text shown while people speak, and sampling can miss very brief text. Caption cue classification is heuristic: uncommon sound-effect wording or unmarked lyrics may still be treated as dialogue. For broader coverage, turn off the gap-only checkbox, use Adaptive or a smaller custom frame interval, and optionally enable scene-change detection. Every-frame mode is intended for short ranges because a feature-length scan can take much longer. These controls can be changed separately. If you clear an automatically selected caption file, it will not be silently reselected for that scan.
 
 OCR reuse is intentionally conservative: meaningful local pixel changes trigger a fresh OCR pass, and every third near-identical sample is refreshed. It is disabled in every-frame mode and when UHD tiling is enabled. The report shows analyzed and reused frame counts. Moving scenes may not benefit, so this is a speed aid rather than a guaranteed time reduction.
@@ -58,6 +62,8 @@ Each scan writes a folder containing:
 - `raw_detections.json` - every OCR detection and scan setting
 - `screenshots/` - clean and optional annotated evidence frames
 - `dialogue_gaps.html` and `dialogue_gaps.csv` - dialogue-free ranges when captions are supplied
+
+The HTML report shows elapsed scan time, and `raw_detections.json` records it in seconds. The app also shows elapsed time when a scan completes.
 
 Super Speed Run writes only the two dialogue-gap files. It does not identify on-screen text.
 
@@ -102,6 +108,7 @@ find-that-text scan "/path/to/movie.mov" --scan-during-dialogue
 find-that-text scan "/path/to/movie.mov" --mode adaptive --scene-detection
 find-that-text scan "/path/to/movie.mov" --no-ocr-reuse
 find-that-text scan "/path/to/movie.mov" --mode custom --custom-frame-step 7 --review-breadth 0.35
+find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.en.srt" --minimum-gap-seconds 2
 find-that-text gaps "/path/to/movie.mov" --captions "/path/to/movie.en.srt"
 ```
 
@@ -113,6 +120,7 @@ Release builds bundle the PP-OCRv6 small models. On first launch, the app copies
 - OCR: [PaddleOCR 3.7.0](https://github.com/PaddlePaddle/PaddleOCR) with PP-OCRv6 small detection and recognition models
 - Optional scene-change detection: [PySceneDetect 0.7.1](https://github.com/Breakthrough/PySceneDetect)
 - Mac interface: [PySide6 6.11.2](https://doc.qt.io/qtforpython-6/)
+- Word plausibility: [wordfreq 3.1.1](https://github.com/rspeer/wordfreq), using offline English and Spanish small word lists
 
 ## Packaging
 

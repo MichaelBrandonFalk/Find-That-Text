@@ -16,6 +16,8 @@ def write_dialogue_gap_reports(
     timeline: CaptionTimeline,
     gaps: list[CaptionCue],
     ocr_performed: bool,
+    minimum_gap_seconds: float,
+    elapsed_seconds: float | None = None,
 ) -> tuple[Path, Path]:
     csv_path = output_dir / "dialogue_gaps.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as file:
@@ -67,7 +69,9 @@ def write_dialogue_gap_reports(
   <div class="summary">
     <div><strong>{len(gaps)}</strong>gap ranges</div>
     <div><strong>{format_timestamp(sum(gap.end_seconds - gap.start_seconds for gap in gaps))}</strong>available scan time</div>
+    <div><strong>{minimum_gap_seconds:g}s</strong>minimum dialogue break</div>
     <div><strong>{timeline.non_dialogue_cue_count}</strong>music or sound cues kept in scan time</div>
+    {f'<div><strong>{format_timestamp(elapsed_seconds)}</strong>elapsed processing time</div>' if elapsed_seconds is not None else ''}
   </div>
   <p class="muted">Recognized music and sound-only cues remain available for scanning. Cues mixing speech with sounds count as dialogue. Review ambiguous caption cues before relying on these ranges.</p>
   <p class="muted">{'For OCR results, see report.html.' if ocr_performed else 'No video frames were decoded and no OCR was run.'} <a href="dialogue_gaps.csv">Download CSV</a></p>

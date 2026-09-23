@@ -147,6 +147,9 @@ def test_super_speed_run_never_decodes_frames_or_loads_ocr(tmp_path: Path, monke
     assert len(result.gaps) == 2
     assert result.report_csv.exists()
     assert "No video frames were decoded and no OCR was run." in result.report_html.read_text(encoding="utf-8")
+    assert "1s</strong>minimum dialogue break" in result.report_html.read_text(encoding="utf-8")
+    assert "elapsed processing time" in result.report_html.read_text(encoding="utf-8")
+    assert result.elapsed_seconds >= 0
 
 
 def test_super_speed_run_requires_captions(tmp_path: Path) -> None:
@@ -155,6 +158,30 @@ def test_super_speed_run_requires_captions(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="needs an English or Spanish SRT/VTT"):
         find_dialogue_gaps(video, settings=ScanSettings(output_root=tmp_path / "gaps"))
+
+
+def test_short_gaps_skip_video_decode_entirely(tmp_path: Path, monkeypatch) -> None:
+    video = tmp_path / "clip.mp4"
+    captions = tmp_path / "clip.srt"
+    _make_video(video, seconds=4)
+    captions.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nHello\n\n"
+        "2\n00:00:01,500 --> 00:00:04,000\nWorld\n",
+        encoding="utf-8",
+    )
+
+    def unexpected_decode(*args, **kwargs):
+        raise AssertionError("No eligible gap should bypass video decoding")
+
+    monkeypatch.setattr("find_that_text.scanner.iter_sampled_frames", unexpected_decode)
+    result = scan_video(video, settings=ScanSettings(output_root=tmp_path / "reports"), engine=EmptyOCREngine())
+
+    assert result.events == []
+    assert result.elapsed_seconds >= 0
+    scan = json.loads(result.raw_json.read_text(encoding="utf-8"))["scan"]
+    assert scan["minimum_dialogue_gap_seconds"] == 1.0
+    assert scan["elapsed_seconds"] >= 0
+    assert "Scan Time" in result.report_html.read_text(encoding="utf-8")
 
 
 def test_gap_only_scan_reports_progress_and_can_cancel_without_samples(tmp_path: Path) -> None:

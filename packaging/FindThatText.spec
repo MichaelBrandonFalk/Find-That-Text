@@ -3,7 +3,7 @@
 from pathlib import Path
 import importlib.util
 
-from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
 project_root = Path(SPECPATH).parent
 version = (project_root / "VERSION").read_text(encoding="utf-8").strip()
@@ -21,8 +21,13 @@ for package_name in [
     "python-bidi",
     "shapely",
     "scenedetect",
+    "wordfreq",
 ]:
     datas += copy_metadata(package_name)
+datas += collect_data_files(
+    "wordfreq",
+    includes=["data/small_en.msgpack.gz", "data/small_es.msgpack.gz"],
+)
 paddlex_spec = importlib.util.find_spec("paddlex")
 if paddlex_spec and paddlex_spec.submodule_search_locations:
     paddlex_root = Path(paddlex_spec.submodule_search_locations[0])

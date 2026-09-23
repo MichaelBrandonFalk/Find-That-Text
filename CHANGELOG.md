@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0
+
+- Added an adjustable minimum dialogue-free break, defaulting to 1.0 second, for OCR scans and gap-only exports.
+- Stopped demoting crowded readable scenes as credits solely because many text events occur nearby.
+- Added offline English/Spanish word plausibility to promote readable signage and screens while keeping garbled OCR out of Likely Forced Text.
+- Added elapsed processing time to the app, HTML reports, raw JSON, and CLI output.
+
 ## 1.5.0
 
 - Built dialogue-free ranges from SRT/VTT cues before OCR; recognized music and sound-effect cues no longer block the default scan.

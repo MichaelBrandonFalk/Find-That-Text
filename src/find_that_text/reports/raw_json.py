@@ -28,6 +28,8 @@ def write_raw_json(
     scene_change_times: list[float] | None = None,
     ocr_frames: int = 0,
     reused_frames: int = 0,
+    minimum_dialogue_gap_seconds: float | None = None,
+    elapsed_seconds: float = 0.0,
 ) -> None:
     detection_indexes = {id(detection): index for index, detection in enumerate(detections)}
     payload = {
@@ -54,6 +56,8 @@ def write_raw_json(
             "caption_filename": caption_path.name if caption_path else None,
             "dialogue_optimization": dialogue_optimization,
             "dialogue_gaps_only": dialogue_gaps_only,
+            "minimum_dialogue_gap_seconds": minimum_dialogue_gap_seconds,
+            "elapsed_seconds": round(elapsed_seconds, 3),
             "scene_detection": scene_detection,
             "scene_change_times": [round(value, 3) for value in (scene_change_times or [])],
             "ocr_frames_analyzed": ocr_frames,

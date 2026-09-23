@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from find_that_text.captions import CaptionCue, CaptionTimeline, find_sidecar_caption
 
 
@@ -81,3 +83,29 @@ def test_music_only_captions_leave_full_scan_range_and_vtt_note_is_ignored(tmp_p
     assert timeline.total_cue_count == 1
     assert timeline.non_dialogue_cue_count == 1
     assert timeline.dialogue_gaps(start_seconds=2.0, end_seconds=5.0) == [CaptionCue(2.0, 5.0)]
+
+
+def test_minimum_dialogue_gap_uses_raw_break_before_speech_padding(tmp_path: Path) -> None:
+    path = tmp_path / "movie.srt"
+    path.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nHello\n\n"
+        "2\n00:00:01,500 --> 00:00:02,500\nHello\n\n"
+        "3\n00:00:03,500 --> 00:00:04,500\nHello\n\n"
+        "4\n00:00:06,500 --> 00:00:07,000\nHello\n",
+        encoding="utf-8",
+    )
+    timeline = CaptionTimeline.from_file(path)
+
+    assert timeline.dialogue_gaps(start_seconds=0, end_seconds=8, minimum_gap_seconds=1.0) == [
+        CaptionCue(2.65, 3.35),
+        CaptionCue(4.65, 6.35),
+        CaptionCue(7.15, 8),
+    ]
+    assert timeline.dialogue_gaps(start_seconds=0, end_seconds=8, minimum_gap_seconds=2.0) == [
+        CaptionCue(4.65, 6.35)
+    ]
+    assert CaptionCue(1.15, 1.35) in timeline.dialogue_gaps(
+        start_seconds=0, end_seconds=8, minimum_gap_seconds=0.5
+    )
+    with pytest.raises(ValueError, match="Minimum dialogue gap"):
+        timeline.dialogue_gaps(start_seconds=0, end_seconds=8, minimum_gap_seconds=float("nan"))

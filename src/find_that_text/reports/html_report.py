@@ -35,6 +35,8 @@ def write_html_report(
     ocr_frames: int = 0,
     reused_frames: int = 0,
     gap_report: bool = False,
+    minimum_dialogue_gap_seconds: float | None = None,
+    elapsed_seconds: float = 0.0,
 ) -> None:
     scan_end = scan_end_seconds if scan_end_seconds is not None else metadata.duration_seconds
     counts = bucket_counts(events)
@@ -95,12 +97,14 @@ def write_html_report(
       <div><strong>{counts[BACKGROUND]}</strong>Background / Credits / Repeated</div>
     </section>
     <section class="meta">
-      <div><strong>Duration</strong><br>{format_timestamp(metadata.duration_seconds)}</div>
+      <div><strong>Video Duration</strong><br>{format_timestamp(metadata.duration_seconds)}</div>
+      <div><strong>Scan Time</strong><br>{format_timestamp(elapsed_seconds)}</div>
       <div><strong>Resolution</strong><br>{metadata.width} x {metadata.height}</div>
       <div><strong>Scan Mode</strong><br>{escape(scan_mode.name)} ({escape(scan_mode.description)})</div>
       <div><strong>Scan Range</strong><br>{format_timestamp(scan_start_seconds)} to {format_timestamp(scan_end)}</div>
       <div><strong>Dialogue Captions</strong><br>{escape(caption_label)}</div>
       <div><strong>Scan Scope</strong><br>{escape(scan_scope)}</div>
+      {f'<div><strong>Minimum Dialogue Gap</strong><br>{minimum_dialogue_gap_seconds:g} s</div>' if minimum_dialogue_gap_seconds is not None else ''}
       {('<div><strong>Dialogue Gaps</strong><br><a href="dialogue_gaps.html">View gap timeline</a> | <a href="dialogue_gaps.csv">CSV</a></div>' if gap_report else '')}
       <div><strong>Adaptive Cadence</strong><br>{"On" if dialogue_optimization else "Off"}</div>
       <div><strong>Scene Detection</strong><br>{"On" if scene_detection else "Off"}</div>

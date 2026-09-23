@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import bisect
 import html
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -96,21 +97,39 @@ class CaptionTimeline:
         start_seconds: float,
         end_seconds: float,
         padding_seconds: float = 0.15,
+        minimum_gap_seconds: float = 0.0,
     ) -> list[CaptionCue]:
         if end_seconds < start_seconds:
             raise ValueError("End time must be after start time.")
+        if not math.isfinite(minimum_gap_seconds) or minimum_gap_seconds < 0:
+            raise ValueError("Minimum dialogue gap must be a finite, non-negative number of seconds.")
         gaps: list[CaptionCue] = []
-        cursor = start_seconds
+        previous_end: float | None = None
         for cue in self.cues:
-            blocked_start = max(start_seconds, cue.start_seconds - padding_seconds)
-            blocked_end = min(end_seconds, cue.end_seconds + padding_seconds)
-            if blocked_end <= cursor or blocked_start >= end_seconds:
+            if cue.end_seconds <= start_seconds - padding_seconds:
+                previous_end = cue.end_seconds
                 continue
-            if blocked_start > cursor:
-                gaps.append(CaptionCue(cursor, blocked_start))
-            cursor = max(cursor, blocked_end)
-        if cursor < end_seconds:
-            gaps.append(CaptionCue(cursor, end_seconds))
+            if cue.start_seconds >= end_seconds + padding_seconds:
+                break
+            raw_start = max(start_seconds, previous_end if previous_end is not None else start_seconds)
+            raw_end = min(end_seconds, cue.start_seconds)
+            if raw_end - raw_start >= minimum_gap_seconds:
+                padded_start = max(
+                    raw_start,
+                    previous_end + padding_seconds if previous_end is not None else start_seconds,
+                )
+                padded_end = min(end_seconds, cue.start_seconds - padding_seconds)
+                if padded_end > padded_start:
+                    gaps.append(CaptionCue(padded_start, padded_end))
+            previous_end = cue.end_seconds
+        raw_start = max(start_seconds, previous_end if previous_end is not None else start_seconds)
+        if end_seconds - raw_start >= minimum_gap_seconds:
+            padded_start = max(
+                raw_start,
+                previous_end + padding_seconds if previous_end is not None else start_seconds,
+            )
+            if end_seconds > padded_start:
+                gaps.append(CaptionCue(padded_start, end_seconds))
         return gaps
 
     def quiet_gap_starts(
