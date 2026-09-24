@@ -35,29 +35,32 @@ body {
   flex-direction: column;
 }
 
-nav {
+.topbar {
   width: min(1180px, 100%);
   margin: 0 auto;
   padding: 26px 0;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  gap: 18px;
   border-bottom: 1px solid rgba(66, 92, 124, 0.14);
   color: #2d4260;
 }
 
-.brand {
-  display: inline-flex;
+.hero-heading {
+  display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 24px;
 }
 
-.brand img {
-  width: 42px;
-  height: 42px;
+.hero-logo {
+  width: 112px;
+  height: 112px;
+  flex: none;
   object-fit: contain;
-  border-radius: 7px;
+}
+
+.hero-details {
+  margin-left: 136px;
 }
 
 .hero-content {
@@ -297,18 +300,31 @@ main a {
 
 @media (max-width: 720px) {
   .hero {
-    height: min(640px, 88vh);
+    height: auto;
     min-height: 560px;
     padding: 0 20px;
     background-position: 62% center;
   }
 
-  nav {
+  .topbar {
     padding: 20px 0;
   }
 
   .hero-content {
     padding: 56px 0 72px;
+  }
+
+  .hero-heading {
+    gap: 16px;
+  }
+
+  .hero-logo {
+    width: 88px;
+    height: 88px;
+  }
+
+  .hero-details {
+    margin-left: 0;
   }
 
   h1 {
@@ -354,8 +370,17 @@ main a {
     min-height: 560px;
   }
 
-  nav {
+  .topbar {
     font-size: 14px;
+  }
+
+  .hero-heading {
+    gap: 12px;
+  }
+
+  .hero-logo {
+    width: 68px;
+    height: 68px;
   }
 
   h1 {
