@@ -35,17 +35,6 @@ body {
   flex-direction: column;
 }
 
-.topbar {
-  width: min(1180px, 100%);
-  margin: 0 auto;
-  padding: 26px 0;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  border-bottom: 1px solid rgba(66, 92, 124, 0.14);
-  color: #2d4260;
-}
-
 .hero-heading {
   display: flex;
   align-items: center;
@@ -306,10 +295,6 @@ main a {
     background-position: 62% center;
   }
 
-  .topbar {
-    padding: 20px 0;
-  }
-
   .hero-content {
     padding: 56px 0 72px;
   }
@@ -368,10 +353,6 @@ main a {
   .hero {
     height: auto;
     min-height: 560px;
-  }
-
-  .topbar {
-    font-size: 14px;
   }
 
   .hero-heading {
