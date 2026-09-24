@@ -47,6 +47,19 @@ nav {
   color: #2d4260;
 }
 
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 7px;
+}
+
 .hero-content {
   width: min(1180px, 100%);
   margin: auto;
