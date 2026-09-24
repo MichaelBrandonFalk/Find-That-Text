@@ -21,10 +21,20 @@ def main() -> int:
         env = os.environ.copy()
         env.pop("PADDLE_PDX_CACHE_HOME", None)
         env["FIND_THAT_TEXT_APP_SUPPORT"] = temp_dir
+        log_path = Path(temp_dir) / "self-test.log"
+        env["FIND_THAT_TEXT_SELF_TEST_LOG"] = str(log_path)
         for argument in ("--self-test", "--self-test-gui", "--self-test-ocr"):
-            result = subprocess.run([str(executable), argument], env=env, timeout=300, check=False)
+            print(f"Running packaged {argument}", flush=True)
+            try:
+                result = subprocess.run([str(executable), argument], env=env, timeout=300, check=False)
+            except subprocess.TimeoutExpired as exc:
+                details = log_path.read_text(encoding="utf-8") if log_path.exists() else "No test log"
+                raise RuntimeError(f"Packaged {argument} timed out.\n{details}") from exc
             if result.returncode != 0:
-                raise RuntimeError(f"Packaged {argument} failed with exit code {result.returncode}")
+                details = log_path.read_text(encoding="utf-8") if log_path.exists() else "No test log"
+                raise RuntimeError(
+                    f"Packaged {argument} failed with exit code {result.returncode}.\n{details}"
+                )
         for model_name in ("PP-OCRv6_small_det", "PP-OCRv6_small_rec"):
             model_dir = Path(temp_dir) / "PaddleX" / "official_models" / model_name
             if not model_dir.is_dir() or not any(model_dir.iterdir()):
