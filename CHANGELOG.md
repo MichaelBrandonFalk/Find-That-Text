@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.0
+
+- Replaced temporary app and website icons with the supplied colorful logo.
+- Added a GitHub repository link at the lower right of the Mac app.
+- Renamed the lowest-priority review bucket to Less Likely in new reports and exports.
+- Advanced the raw JSON schema to version 3 for the changed bucket value.
+- Added a standalone shareable HTML report with embedded review-size evidence frames and an Export HTML command.
+- Made the dialogue-gap HTML self-contained, including its CSV download.
+
 ## 1.7.1
 
 - Save report folders under Downloads by default instead of Desktop.

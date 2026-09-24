@@ -11,6 +11,7 @@ datas = [
     (str(project_root / "VERSION"), "."),
     (str(project_root / "PRIVACY.md"), "."),
     (str(project_root / "THIRD_PARTY_NOTICES.md"), "."),
+    (str(project_root / "src" / "find_that_text" / "resources" / "app-icon.png"), "find_that_text/resources"),
 ]
 for package_name in [
     "imagesize",
@@ -93,7 +94,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="Find That Text.app",
-    icon=None,
+    icon=str(project_root / "packaging" / "FindThatText.icns"),
     bundle_identifier="org.findthattext.app",
     info_plist={
         "CFBundleDisplayName": "Find That Text",

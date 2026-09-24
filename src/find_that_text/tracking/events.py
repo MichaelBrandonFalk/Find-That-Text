@@ -152,7 +152,7 @@ class TextEvent:
         return {
             "Likely Forced Text": 0,
             "Needs Review": 1,
-            "Background / Credits / Repeated Graphics": 2,
+            "Less Likely": 2,
         }.get(self.review_bucket, 1)
 
     def to_row(self) -> dict[str, str]:

@@ -13,7 +13,7 @@ from find_that_text.tracking.events import TextEvent
 
 LIKELY_FORCED_TEXT = "Likely Forced Text"
 NEEDS_REVIEW = "Needs Review"
-BACKGROUND = "Background / Credits / Repeated Graphics"
+BACKGROUND = "Less Likely"
 _WORD = re.compile(r"[^\W\d_]{3,}", re.UNICODE)
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 _WEB_TOKENS = {"com", "http", "https", "net", "org", "www"}

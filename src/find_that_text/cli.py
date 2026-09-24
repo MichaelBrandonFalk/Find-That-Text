@@ -117,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         print()
         print(f"Report folder: {result.output_dir}")
         print(f"HTML report:   {result.report_html}")
+        print(f"Shareable HTML:{result.shareable_html}")
         print(f"CSV report:    {result.report_csv}")
         print(f"Excel report:  {result.report_xlsx}")
         print(f"Raw JSON:      {result.raw_json}")

@@ -124,6 +124,7 @@ def test_music_is_scanned_and_dialogue_gap_timeline_is_exported(tmp_path: Path) 
 
     assert progress[-1].frames_processed == 2
     assert (result.output_dir / "dialogue_gaps.html").exists()
+    assert result.shareable_html.exists()
     csv_text = (result.output_dir / "dialogue_gaps.csv").read_text(encoding="utf-8")
     assert "00:00:00.000,00:00:00.850" in csv_text
     assert "00:00:03.150" in csv_text
@@ -146,6 +147,7 @@ def test_super_speed_run_never_decodes_frames_or_loads_ocr(tmp_path: Path, monke
 
     assert len(result.gaps) == 2
     assert result.report_csv.exists()
+    assert "data:text/csv;base64," in result.report_html.read_text(encoding="utf-8")
     assert "No video frames were decoded and no OCR was run." in result.report_html.read_text(encoding="utf-8")
     assert "1s</strong>minimum dialogue break" in result.report_html.read_text(encoding="utf-8")
     assert "elapsed processing time" in result.report_html.read_text(encoding="utf-8")

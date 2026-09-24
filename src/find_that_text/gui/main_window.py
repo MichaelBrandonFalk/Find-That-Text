@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 import threading
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -42,6 +43,9 @@ from find_that_text.tracking.relevance import LIKELY_FORCED_TEXT, NEEDS_REVIEW, 
 from find_that_text.util.paths import default_reports_root
 from find_that_text.util.timestamps import format_timestamp, parse_timestamp
 from find_that_text.version import __version__
+
+
+APP_ICON_PATH = Path(__file__).resolve().parents[1] / "resources" / "app-icon.png"
 
 
 class DropFrame(QFrame):
@@ -117,6 +121,7 @@ class MainWindow(QMainWindow):
         self.auto_find_captions = True
         self.output_dir: Path | None = None
         self.report_path: Path | None = None
+        self.shareable_report_path: Path | None = None
         self.preferences = QSettings("org.findthattext", "Find That Text")
         saved_output_root = self.preferences.value("reportRoot", "", type=str)
         self.output_root = Path(saved_output_root) if saved_output_root else default_reports_root()
@@ -144,6 +149,10 @@ class MainWindow(QMainWindow):
         layout.setSpacing(16)
 
         header = QHBoxLayout()
+        if APP_ICON_PATH.is_file():
+            icon_label = QLabel()
+            icon_label.setPixmap(QPixmap(str(APP_ICON_PATH)).scaled(40, 40))
+            header.addWidget(icon_label)
         title = QLabel("Find That Text")
         title.setObjectName("appTitle")
         version = QLabel(f"Version {__version__}")
@@ -314,7 +323,12 @@ class MainWindow(QMainWindow):
         self.open_output_button = QPushButton("Open Report")
         self.open_output_button.setEnabled(False)
         self.open_output_button.clicked.connect(self.open_report)
+        self.share_button = QPushButton("Export HTML")
+        self.share_button.setToolTip("Save a single HTML file with evidence frames embedded.")
+        self.share_button.setEnabled(False)
+        self.share_button.clicked.connect(self.export_shareable_report)
         buttons.addWidget(self.open_output_button)
+        buttons.addWidget(self.share_button)
         buttons.addWidget(self.cancel_button)
         buttons.addWidget(self.scan_button)
         controls_layout.addLayout(buttons)
@@ -334,6 +348,12 @@ class MainWindow(QMainWindow):
         technology_label.setOpenExternalLinks(True)
         technology_label.setTextFormat(Qt.TextFormat.RichText)
         self.statusBar().addWidget(technology_label, 1)
+        repository_label = QLabel(
+            '<a href="https://github.com/MichaelBrandonFalk/Find-That-Text">GitHub Repo</a>'
+        )
+        repository_label.setOpenExternalLinks(True)
+        repository_label.setTextFormat(Qt.TextFormat.RichText)
+        self.statusBar().addPermanentWidget(repository_label)
 
         self.setStyleSheet(
             """
@@ -455,6 +475,7 @@ class MainWindow(QMainWindow):
         self.scan_button.setEnabled(False)
         self.cancel_button.setEnabled(True)
         self.open_output_button.setEnabled(False)
+        self.share_button.setEnabled(False)
         self.progress.setValue(0)
         self.status_label.setText("Finding dialogue gaps..." if settings.gaps_only else "Preparing scan...")
         self.thread.start()
@@ -480,6 +501,9 @@ class MainWindow(QMainWindow):
     def scan_finished(self, result: object) -> None:
         self.output_dir = result.output_dir
         self.report_path = result.report_html
+        self.shareable_report_path = (
+            result.report_html if isinstance(result, DialogueGapResult) else result.shareable_html
+        )
         self.progress.setValue(1000)
         if isinstance(result, DialogueGapResult):
             self.status_label.setText(
@@ -496,6 +520,7 @@ class MainWindow(QMainWindow):
         self.scan_button.setEnabled(True)
         self.cancel_button.setEnabled(False)
         self.open_output_button.setEnabled(True)
+        self.share_button.setEnabled(True)
 
     def scan_failed(self, message: str) -> None:
         self.scan_button.setEnabled(True)
@@ -511,6 +536,26 @@ class MainWindow(QMainWindow):
     def open_report(self) -> None:
         if self.report_path:
             subprocess.run(["open", str(self.report_path)], check=False)
+
+    def export_shareable_report(self) -> None:
+        if not self.shareable_report_path or not self.output_dir:
+            return
+        suggested_name = f"{self.output_dir.name}_shareable.html"
+        destination, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Shareable Report",
+            str(Path.home() / "Downloads" / suggested_name),
+            "HTML Files (*.html)",
+        )
+        if not destination:
+            return
+        try:
+            if Path(destination).resolve() != self.shareable_report_path.resolve():
+                shutil.copyfile(self.shareable_report_path, destination)
+        except OSError as exc:
+            QMessageBox.critical(self, "Could not export report", str(exc))
+            return
+        self.status_label.setText(f"Shareable report saved: {Path(destination).name}")
 
     def _toggle_advanced(self, checked: bool) -> None:
         self.advanced_group.setVisible(checked)
@@ -559,6 +604,8 @@ class MainWindow(QMainWindow):
 
 def run(argv: list[str]) -> int:
     app = QApplication(argv)
+    if APP_ICON_PATH.is_file():
+        app.setWindowIcon(QIcon(str(APP_ICON_PATH)))
     window = MainWindow()
     window.show()
     return app.exec()

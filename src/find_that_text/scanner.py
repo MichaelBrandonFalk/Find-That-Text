@@ -104,6 +104,7 @@ class ScanResult:
     report_csv: Path
     raw_json: Path
     report_xlsx: Path
+    shareable_html: Path
     caption_path: Path | None = None
     elapsed_seconds: float = 0.0
 
@@ -410,12 +411,12 @@ def scan_video(
 
     report_csv = output_dir / "report.csv"
     report_html = output_dir / "report.html"
+    shareable_html = output_dir / "shareable_report.html"
     report_xlsx = output_dir / "report.xlsx"
     raw_json = output_dir / "raw_detections.json"
     write_csv_report(report_csv, events)
     write_xlsx_report(report_xlsx, events)
-    write_html_report(
-        report_html,
+    html_options = dict(
         events=events,
         metadata=metadata,
         scan_mode=scan_mode,
@@ -436,6 +437,8 @@ def scan_video(
         minimum_dialogue_gap_seconds=minimum_gap_seconds if caption_timeline else None,
         elapsed_seconds=elapsed_seconds,
     )
+    write_html_report(report_html, **html_options)
+    write_html_report(shareable_html, standalone=True, **html_options)
     write_raw_json(
         raw_json,
         detections=detections,
@@ -471,6 +474,7 @@ def scan_video(
         report_csv,
         raw_json,
         report_xlsx,
+        shareable_html,
         caption_timeline.path if caption_timeline else None,
         elapsed_seconds,
     )

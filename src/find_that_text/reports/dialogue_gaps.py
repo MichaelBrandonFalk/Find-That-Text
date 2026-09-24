@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import base64
 from html import escape
 from pathlib import Path
 
@@ -43,6 +44,7 @@ def write_dialogue_gap_reports(
     if not rows:
         rows = '<tr><td colspan="3">No dialogue gaps in the selected range.</td></tr>'
     html_path = output_dir / "dialogue_gaps.html"
+    csv_data_uri = "data:text/csv;base64," + base64.b64encode(csv_path.read_bytes()).decode("ascii")
     html_path.write_text(
         f"""<!doctype html>
 <html lang="en">
@@ -74,7 +76,7 @@ def write_dialogue_gap_reports(
     {f'<div><strong>{format_timestamp(elapsed_seconds)}</strong>elapsed processing time</div>' if elapsed_seconds is not None else ''}
   </div>
   <p class="muted">Recognized music and sound-only cues remain available for scanning. Cues mixing speech with sounds count as dialogue. Review ambiguous caption cues before relying on these ranges.</p>
-  <p class="muted">{'For OCR results, see report.html.' if ocr_performed else 'No video frames were decoded and no OCR was run.'} <a href="dialogue_gaps.csv">Download CSV</a></p>
+  <p class="muted">{'For OCR results, see the screen-text report.' if ocr_performed else 'No video frames were decoded and no OCR was run.'} <a href="{csv_data_uri}" download="dialogue_gaps.csv">Download CSV</a></p>
   <table><thead><tr><th>Start</th><th>End</th><th>Duration</th></tr></thead><tbody>{rows}</tbody></table>
 </main></body></html>
 """,

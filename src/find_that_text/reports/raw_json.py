@@ -33,7 +33,7 @@ def write_raw_json(
 ) -> None:
     detection_indexes = {id(detection): index for index, detection in enumerate(detections)}
     payload = {
-        "schema_version": 2,
+        "schema_version": 3,
         "application": "Find That Text",
         "application_version": __version__,
         "source": {

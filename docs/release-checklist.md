@@ -18,8 +18,9 @@ Verify each item before publishing release binaries.
 - [ ] VTT caption optimization verified
 - [ ] No-caption fallback verified
 - [ ] Scene-change sampling verified
-- [ ] Likely / Review / Background bucketing verified
+- [ ] Likely / Review / Less Likely bucketing verified
 - [ ] Screenshots verified
+- [ ] Standalone HTML opens with embedded evidence and no adjacent files
 - [ ] Raw JSON verified
 - [ ] Packaged `.app` tested
 - [ ] DMG tested

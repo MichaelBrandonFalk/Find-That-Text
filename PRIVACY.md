@@ -4,6 +4,8 @@ Find That Text processes videos locally on your computer.
 
 Videos, dialogue caption files, screenshots, OCR results, filenames, and reports are not uploaded by Find That Text.
 
+The optional shareable HTML report embeds review-size video frames in a local file. Exporting it does not upload it; anyone you send it to can view those frames and the detected text without the original video.
+
 The application does not require an account.
 
 The application does not include analytics or advertising.

@@ -59,6 +59,7 @@ OCR reuse is intentionally conservative: meaningful local pixel changes trigger 
 Each scan writes a folder containing:
 
 - `report.html` - ranked and searchable forced-text candidate report
+- `shareable_report.html` - single-file report with embedded evidence frames for coworkers
 - `report.xlsx` - filterable spreadsheet with clickable links to evidence screenshots
 - `report.csv` - QC-friendly event summary with scores and reasons
 - `raw_detections.json` - every OCR detection and scan setting
@@ -68,7 +69,9 @@ Each scan writes a folder containing:
 By default, report folders are created in `~/Downloads/Find That Text Reports`. Use **Choose Folder** in the app to pick another location, or **Use Downloads** to restore the default. The choice is remembered for future runs, including Super Speed Run. The CLI uses the same default and accepts `--output` to choose another folder.
 
 The HTML report shows elapsed scan time, and `raw_detections.json` records it in seconds. The app also shows elapsed time when a scan completes.
-Click an evidence thumbnail or **Open screenshot** in the HTML report, or **Open frame** in `report.xlsx`, to view the saved frame without opening the film. Keep the entire report folder together when moving it: spreadsheet links point to files in its `screenshots/` subfolder. A CSV opened by itself contains screenshot paths, not clickable links.
+Click an evidence thumbnail or **Open screenshot** in the HTML report, or **Open frame** in `report.xlsx`, to view the saved frame without opening the film. `report.html` and the spreadsheet depend on the neighboring `screenshots/` folder, so keep the full report folder together when moving those files. A CSV opened by itself contains screenshot paths, not clickable links.
+
+To send one file to a coworker, use **Export HTML** in the app or send `shareable_report.html` from the report folder. It embeds review-size evidence frames and works without the film or any adjacent files, including for the image viewer and search. It may still be large for a feature-length scan. For original-resolution images and spreadsheet links, compress and share the whole report folder instead. Exported HTML includes frames from the video, so review it before sending it outside your team. Super Speed Run's `dialogue_gaps.html` is also standalone.
 
 Super Speed Run writes only the two dialogue-gap files. It does not identify on-screen text.
 
@@ -79,6 +82,8 @@ The fastest pipeline targets a two-hour feature in two hours or less on supporte
 ## Privacy
 
 All normal scanning is local. Videos, caption files, screenshots, OCR results, filenames, and reports are not uploaded by Find That Text. See [PRIVACY.md](PRIVACY.md).
+
+The logo source is `packaging/logo-source.png`. Run `python scripts/build_icons.py` on macOS after replacing it to regenerate the app and website icons.
 
 ## System Requirements
 

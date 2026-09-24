@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import base64
+from io import BytesIO
 from datetime import datetime
 from html import escape
 from pathlib import Path
+
+from PIL import Image
 
 from find_that_text.tracking.events import TextEvent
 from find_that_text.tracking.relevance import (
@@ -37,6 +41,7 @@ def write_html_report(
     gap_report: bool = False,
     minimum_dialogue_gap_seconds: float | None = None,
     elapsed_seconds: float = 0.0,
+    standalone: bool = False,
 ) -> None:
     scan_end = scan_end_seconds if scan_end_seconds is not None else metadata.duration_seconds
     counts = bucket_counts(events)
@@ -45,6 +50,32 @@ def write_html_report(
         "Dialogue gaps only"
         if dialogue_gaps_only
         else "Full video (no captions available)" if caption_path is None else "Full video"
+    )
+    viewer_html = (
+        '<dialog id="frame-viewer"><button type="button" id="close-frame">Close</button>'
+        '<img alt="Expanded evidence frame"></dialog>'
+        if standalone else ""
+    )
+    viewer_script = """
+    const viewer = document.getElementById('frame-viewer');
+    document.querySelectorAll('.frame-trigger').forEach(button => button.addEventListener('click', () => {
+      viewer.querySelector('img').src = button.querySelector('img').src;
+      viewer.showModal();
+    }));
+    document.getElementById('close-frame').addEventListener('click', () => viewer.close());
+    """ if standalone else ""
+    sections = "\n".join(
+        (
+            _bucket_section(
+                LIKELY_FORCED_TEXT, events, css_class="likely", report_dir=path.parent,
+                standalone=standalone,
+            ),
+            _bucket_section(
+                NEEDS_REVIEW, events, css_class="review", report_dir=path.parent,
+                standalone=standalone,
+            ),
+            _background_section(events, report_dir=path.parent, standalone=standalone),
+        )
     )
     html = f"""<!doctype html>
 <html lang="en">
@@ -84,6 +115,11 @@ def write_html_report(
     .review .score {{ color: var(--review); }}
     img.thumb {{ width: 160px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 5px; border: 1px solid var(--line); }}
     .evidence-link {{ display: block; margin-top: 4px; color: #165ea8; font-weight: 650; white-space: nowrap; }}
+    .frame-trigger {{ padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }}
+    dialog {{ width: min(96vw, 1400px); max-height: 96vh; padding: 12px; border: 1px solid var(--line); border-radius: 7px; }}
+    dialog::backdrop {{ background: rgba(15, 26, 42, 0.78); }}
+    dialog img {{ display: block; width: 100%; max-height: calc(96vh - 65px); object-fit: contain; }}
+    dialog button {{ display: block; margin: 0 0 10px auto; padding: 6px 12px; }}
     .empty {{ padding: 24px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); }}
     @media (max-width: 720px) {{ .summary {{ grid-template-columns: 1fr; }} header, main {{ padding-left: 18px; padding-right: 18px; }} }}
   </style>
@@ -95,7 +131,7 @@ def write_html_report(
     <section class="summary">
       <div><strong>{counts[LIKELY_FORCED_TEXT]}</strong>Likely Forced Text</div>
       <div><strong>{counts[NEEDS_REVIEW]}</strong>Needs Review</div>
-      <div><strong>{counts[BACKGROUND]}</strong>Background / Credits / Repeated</div>
+      <div><strong>{counts[BACKGROUND]}</strong>Less Likely</div>
     </section>
     <section class="meta">
       <div><strong>Video Duration</strong><br>{format_timestamp(metadata.duration_seconds)}</div>
@@ -106,7 +142,7 @@ def write_html_report(
       <div><strong>Dialogue Captions</strong><br>{escape(caption_label)}</div>
       <div><strong>Scan Scope</strong><br>{escape(scan_scope)}</div>
       {f'<div><strong>Minimum Dialogue Gap</strong><br>{minimum_dialogue_gap_seconds:g} s</div>' if minimum_dialogue_gap_seconds is not None else ''}
-      {('<div><strong>Dialogue Gaps</strong><br><a href="dialogue_gaps.html">View gap timeline</a> | <a href="dialogue_gaps.csv">CSV</a></div>' if gap_report else '')}
+      {('<div><strong>Dialogue Gaps</strong><br><a href="dialogue_gaps.html">View gap timeline</a> | <a href="dialogue_gaps.csv">CSV</a></div>' if gap_report and not standalone else '')}
       <div><strong>Adaptive Cadence</strong><br>{"On" if dialogue_optimization else "Off"}</div>
       <div><strong>Scene Detection</strong><br>{"On" if scene_detection else "Off"}</div>
       <div><strong>Review Breadth</strong><br>{review_breadth:.0%}</div>
@@ -114,16 +150,15 @@ def write_html_report(
       <div><strong>OCR Work</strong><br>{ocr_frames} frames analyzed, {reused_frames} reused</div>
       <div><strong>Text Strictness</strong><br>Minimum confidence {min_ocr_confidence:.0%}</div>
       <div><strong>Application Version</strong><br>{escape(__version__)}</div>
-      <div><strong>Review Files</strong><br><a href="report.xlsx">Spreadsheet</a> | <a href="report.csv">CSV</a></div>
+      {('<div><strong>Review Files</strong><br><a href="report.xlsx">Spreadsheet</a> | <a href="report.csv">CSV</a></div>' if not standalone else '')}
       <div><strong>Scan Date</strong><br>{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</div>
     </section>
   </header>
   <main>
     <div class="toolbar"><input id="search" type="search" placeholder="Search text, reasons, or timecodes"></div>
-    {_bucket_section(LIKELY_FORCED_TEXT, events, css_class="likely")}
-    {_bucket_section(NEEDS_REVIEW, events, css_class="review")}
-    {_background_section(events)}
+    {sections}
   </main>
+  {viewer_html}
   <script>
     const search = document.getElementById('search');
     search.addEventListener('input', () => {{
@@ -133,6 +168,7 @@ def write_html_report(
       }}
       if (query) document.querySelectorAll('details').forEach(item => item.open = true);
     }});
+    {viewer_script}
   </script>
 </body>
 </html>
@@ -140,42 +176,62 @@ def write_html_report(
     path.write_text(html, encoding="utf-8")
 
 
-def _bucket_section(bucket: str, events: list[TextEvent], *, css_class: str) -> str:
+def _bucket_section(
+    bucket: str, events: list[TextEvent], *, css_class: str, report_dir: Path, standalone: bool
+) -> str:
     matching = [event for event in events if event.review_bucket == bucket]
-    content = _table(matching, css_class=css_class) if matching else '<div class="empty">No moments in this section.</div>'
+    content = (
+        _table(matching, css_class=css_class, report_dir=report_dir, standalone=standalone)
+        if matching else '<div class="empty">No moments in this section.</div>'
+    )
     return f"""<section class="bucket {css_class}">
       <div class="bucket-heading"><h2>{escape(bucket)}</h2><span>{len(matching)} moments</span></div>
       {content}
     </section>"""
 
 
-def _background_section(events: list[TextEvent]) -> str:
+def _background_section(events: list[TextEvent], *, report_dir: Path, standalone: bool) -> str:
     matching = [event for event in events if event.review_bucket == BACKGROUND]
-    content = _table(matching, css_class="background") if matching else '<div class="empty">No background moments.</div>'
+    content = (
+        _table(matching, css_class="background", report_dir=report_dir, standalone=standalone)
+        if matching else '<div class="empty">No moments in this section.</div>'
+    )
     return f"""<details>
       <summary>{escape(BACKGROUND)} ({len(matching)})</summary>
       <div class="bucket background">{content}</div>
     </details>"""
 
 
-def _table(events: list[TextEvent], *, css_class: str) -> str:
-    rows = "\n".join(_event_row(event) for event in events)
+def _table(events: list[TextEvent], *, css_class: str, report_dir: Path, standalone: bool) -> str:
+    rows = "\n".join(
+        _event_row(event, report_dir=report_dir, standalone=standalone) for event in events
+    )
     return f"""<div class="table-wrap"><table class="{escape(css_class)}">
       <thead><tr><th>Start</th><th>End</th><th>Text</th><th>Score</th><th>Why</th><th>Position</th><th>Evidence</th></tr></thead>
       <tbody>{rows}</tbody>
     </table></div>"""
 
 
-def _event_row(event: TextEvent) -> str:
+def _event_row(event: TextEvent, *, report_dir: Path, standalone: bool) -> str:
     thumb = ""
     if event.screenshot:
-        thumb = (
-            f'<a href="{escape(event.screenshot, quote=True)}" target="_blank" rel="noopener">'
-            f'<img class="thumb" src="{escape(event.screenshot, quote=True)}" '
-            f'alt="Evidence frame for event {event.event_id}"></a>'
-            f'<a class="evidence-link" href="{escape(event.screenshot, quote=True)}" '
-            f'target="_blank" rel="noopener">Open screenshot</a>'
-        )
+        if standalone:
+            image_src = _embedded_image(report_dir, event.screenshot)
+            if image_src:
+                thumb = (
+                    '<button class="frame-trigger" type="button">'
+                    f'<img class="thumb" src="{image_src}" '
+                    f'alt="Evidence frame for event {event.event_id}">'
+                    '<span class="evidence-link">Open screenshot</span></button>'
+                )
+        else:
+            thumb = (
+                f'<a href="{escape(event.screenshot, quote=True)}" target="_blank" rel="noopener">'
+                f'<img class="thumb" src="{escape(event.screenshot, quote=True)}" '
+                f'alt="Evidence frame for event {event.event_id}"></a>'
+                f'<a class="evidence-link" href="{escape(event.screenshot, quote=True)}" '
+                f'target="_blank" rel="noopener">Open screenshot</a>'
+            )
     return f"""<tr>
       <td>{format_timestamp(event.start_seconds)}</td>
       <td>{format_timestamp(event.end_seconds)}</td>
@@ -185,3 +241,18 @@ def _event_row(event: TextEvent) -> str:
       <td>{escape(event.position)}</td>
       <td>{thumb}</td>
     </tr>"""
+
+
+def _embedded_image(report_dir: Path, screenshot: str) -> str:
+    image_path = (report_dir / screenshot).resolve()
+    if not image_path.is_relative_to(report_dir.resolve()) or not image_path.is_file():
+        return ""
+    try:
+        with Image.open(image_path) as source:
+            image = source.convert("RGB")
+            image.thumbnail((1280, 1280), Image.Resampling.LANCZOS)
+            buffer = BytesIO()
+            image.save(buffer, format="JPEG", quality=80)
+    except OSError:
+        return ""
+    return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
