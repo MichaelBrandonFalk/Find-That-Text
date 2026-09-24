@@ -3,7 +3,7 @@
 from pathlib import Path
 import importlib.util
 
-from PyInstaller.utils.hooks import collect_data_files, copy_metadata
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, copy_metadata
 
 project_root = Path(SPECPATH).parent
 datas = [
@@ -44,7 +44,7 @@ for model_name in ["PP-OCRv6_small_det", "PP-OCRv6_small_rec"]:
 a = Analysis(
     [str(project_root / "src" / "find_that_text" / "app.py")],
     pathex=[str(project_root / "src")],
-    binaries=[],
+    binaries=collect_dynamic_libs("paddle"),
     datas=datas,
     hiddenimports=[
         "paddle",

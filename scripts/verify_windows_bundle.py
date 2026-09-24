@@ -12,6 +12,10 @@ def main() -> int:
     executable = bundle / "Find That Text.exe"
     if not executable.is_file():
         raise FileNotFoundError(executable)
+    for library_name in ("mklml.dll", "libiomp5md.dll"):
+        library = bundle / "_internal" / "paddle" / "libs" / library_name
+        if not library.is_file():
+            raise FileNotFoundError(f"Bundled Paddle library missing: {library}")
     for model_name in ("PP-OCRv6_small_det", "PP-OCRv6_small_rec"):
         model_dir = bundle / "_internal" / "PaddleX" / "official_models" / model_name
         if not model_dir.is_dir() or not any(model_dir.iterdir()):
