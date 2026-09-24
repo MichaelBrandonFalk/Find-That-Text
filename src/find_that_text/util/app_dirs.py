@@ -16,6 +16,8 @@ def app_support_dir() -> Path:
         return Path(override).expanduser()
     if platform.system() == "Darwin":
         return Path.home() / "Library" / "Application Support" / APP_NAME
+    if platform.system() == "Windows":
+        return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / APP_NAME
     return Path.home() / ".find-that-text"
 
 
@@ -48,6 +50,8 @@ def install_bundled_paddlex_models(cache_dir: Path) -> None:
 
 def bundled_paddlex_dir() -> Path:
     if getattr(sys, "frozen", False):
+        if platform.system() == "Windows":
+            return Path(sys._MEIPASS) / "PaddleX"
         executable = Path(sys.executable).resolve()
         return executable.parents[1] / "Resources" / "PaddleX"
     return Path(__file__).resolve().parents[3] / ".paddlex-cache"

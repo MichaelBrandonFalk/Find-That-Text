@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import subprocess
 import shutil
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon, QPixmap
+from PySide6.QtCore import QSettings, Qt, QThread, QTimer, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -535,7 +534,7 @@ class MainWindow(QMainWindow):
 
     def open_report(self) -> None:
         if self.report_path:
-            subprocess.run(["open", str(self.report_path)], check=False)
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.report_path)))
 
     def export_shareable_report(self) -> None:
         if not self.shareable_report_path or not self.output_dir:

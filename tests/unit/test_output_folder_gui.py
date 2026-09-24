@@ -53,6 +53,11 @@ def test_output_folder_choice_is_remembered_and_can_be_reset(tmp_path: Path, mon
     third.shareable_report_path = report_file
     third.export_shareable_report()
     assert exported_file.read_text(encoding="utf-8") == "<html>Standalone report</html>"
+    opened_urls = []
+    monkeypatch.setattr(main_window.QDesktopServices, "openUrl", opened_urls.append)
+    third.report_path = report_file
+    third.open_report()
+    assert opened_urls[0].toLocalFile() == str(report_file)
     assert "GitHub Repo" in " ".join(label.text() for label in third.statusBar().findChildren(main_window.QLabel))
     for window in (first, second, third):
         window.close()
