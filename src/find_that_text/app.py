@@ -29,7 +29,7 @@ def main() -> int:
         app.processEvents()
         window.close()
         return 0
-    if "--self-test" in sys.argv or "--self-test-ocr" in sys.argv:
+    if any(arg in sys.argv for arg in ("--self-test", "--self-test-ocr", "--self-test-scan")):
         _self_test_note("configuring model cache")
         configure_paddle_cache()
         _self_test_note("importing runtime")
@@ -49,7 +49,7 @@ def main() -> int:
             print(f"av {av.__version__}")
             print(f"onnxruntime {onnxruntime.__version__}")
             print(f"pyside6 {PySide6.__version__}")
-        if "--self-test-ocr" in sys.argv:
+        if "--self-test-ocr" in sys.argv or "--self-test-scan" in sys.argv:
             import numpy as np
             from PIL import Image, ImageDraw
 
@@ -67,6 +67,31 @@ def main() -> int:
                 print(f"ocr observations {len(observations)}")
                 for observation in observations:
                     print(f"{observation.confidence:.3f} {observation.text}")
+            if "--self-test-scan" in sys.argv:
+                from tempfile import TemporaryDirectory
+
+                from find_that_text.scanner import ScanSettings, scan_video
+
+                video_path = Path(sys.argv[sys.argv.index("--self-test-scan") + 1])
+                with TemporaryDirectory(prefix="find-that-text-scan-") as output_root:
+                    _self_test_note("scanning test video")
+                    result = scan_video(
+                        video_path,
+                        settings=ScanSettings(output_root=output_root),
+                        engine=engine,
+                    )
+                    if result.caption_path != video_path.with_suffix(".srt"):
+                        raise RuntimeError("Packaged scan did not use the sidecar captions")
+                    for report in (
+                        result.report_html,
+                        result.report_csv,
+                        result.report_xlsx,
+                        result.shareable_html,
+                        result.raw_json,
+                    ):
+                        if not report.is_file() or report.stat().st_size == 0:
+                            raise RuntimeError(f"Packaged scan did not produce {report}")
+                    _self_test_note("test scan reports written")
         return 0
     return run(sys.argv)
 
