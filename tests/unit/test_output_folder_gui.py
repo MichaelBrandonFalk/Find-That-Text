@@ -57,7 +57,7 @@ def test_output_folder_choice_is_remembered_and_can_be_reset(tmp_path: Path, mon
     monkeypatch.setattr(main_window.QDesktopServices, "openUrl", opened_urls.append)
     third.report_path = report_file
     third.open_report()
-    assert opened_urls[0].toLocalFile() == str(report_file)
+    assert Path(opened_urls[0].toLocalFile()) == report_file
     assert "GitHub Repo" in " ".join(label.text() for label in third.statusBar().findChildren(main_window.QLabel))
     for window in (first, second, third):
         window.close()
