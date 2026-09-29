@@ -21,9 +21,11 @@
   }
 
   const download = document.getElementById("download");
+  const windowsDownload = document.getElementById("download-windows");
   const status = document.getElementById("download-status");
-  if (!download || !status || owner === "OWNER") {
+  if (!download || !windowsDownload || !status || owner === "OWNER") {
     if (download) download.href = latestUrl;
+    if (windowsDownload) windowsDownload.href = latestUrl;
     return;
   }
 
@@ -35,16 +37,21 @@
       return response.json();
     })
     .then((release) => {
-      const asset = (release.assets || []).find((item) =>
+      const macAsset = (release.assets || []).find((item) =>
         /macOS-Apple-Silicon\.dmg$/i.test(item.name)
       );
-      download.href = asset ? asset.browser_download_url : release.html_url || latestUrl;
-      status.textContent = asset
+      const windowsAsset = (release.assets || []).find((item) =>
+        /Windows-x64\.zip$/i.test(item.name)
+      );
+      download.href = macAsset ? macAsset.browser_download_url : release.html_url || latestUrl;
+      windowsDownload.href = windowsAsset ? windowsAsset.browser_download_url : release.html_url || latestUrl;
+      status.textContent = macAsset && windowsAsset
         ? `Current version: ${release.tag_name}`
-        : "Open the latest GitHub Release to download the Mac build.";
+        : "Open the latest GitHub Release to choose a build.";
     })
     .catch(() => {
       download.href = latestUrl;
+      windowsDownload.href = latestUrl;
       status.textContent = "Release metadata is unavailable. The button opens the latest GitHub Release.";
     });
 })();

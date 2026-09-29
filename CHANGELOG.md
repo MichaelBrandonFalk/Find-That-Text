@@ -2,6 +2,7 @@
 
 ## 1.8.0
 
+- Added a self-contained Windows x64 ZIP with bundled OCR models and verified the extracted app can scan a captioned video and write reports.
 - Replaced temporary app and website icons with the supplied colorful logo.
 - Added a GitHub repository link at the lower right of the Mac app.
 - Renamed the lowest-priority review bucket to Less Likely in new reports and exports.

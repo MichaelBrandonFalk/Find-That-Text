@@ -2,11 +2,11 @@
 
 Find likely forced-text moments in a movie without rewatching the entire program.
 
-Find That Text is a free, open-source macOS utility for subtitle and localization teams. It scans visible text in video frames, groups repeated detections into screen-text moments, and produces a ranked local review report. It is designed for Apple Silicon Macs and keeps the video, captions, screenshots, and OCR results on the computer.
+Find That Text is a free, open-source desktop utility for subtitle and localization teams. It scans visible text in video frames, groups repeated detections into screen-text moments, and produces a ranked local review report. It runs on Apple Silicon Macs and Windows x64, and keeps the video, captions, screenshots, and OCR results on the computer.
 
 ## Download
 
-Download the Apple Silicon app from the [latest GitHub Release](https://github.com/MichaelBrandonFalk/Find-That-Text/releases/latest), or visit the [Find That Text website](https://michaelbrandonfalk.github.io/Find-That-Text/).
+Download the Apple Silicon DMG or Windows x64 ZIP from the [latest GitHub Release](https://github.com/MichaelBrandonFalk/Find-That-Text/releases/latest), or visit the [Find That Text website](https://michaelbrandonfalk.github.io/Find-That-Text/). For Windows, extract the entire ZIP and run `Find That Text.exe` from the extracted folder. No Python installation or model download is needed. The Windows build is unsigned, so Windows SmartScreen may ask you to confirm before opening it.
 
 ## What It Finds
 
@@ -77,7 +77,7 @@ Super Speed Run writes only the two dialogue-gap files. It does not identify on-
 
 ## Performance Target
 
-The fastest pipeline targets a two-hour feature in two hours or less on supported Apple Silicon hardware. Actual time depends on the Mac, source codec, dialogue density, and detected text volume. Full-feature benchmarking remains part of release validation; the app does not present a guaranteed completion time.
+The fastest pipeline targets a two-hour feature in two hours or less on supported hardware. Actual time depends on the computer, source codec, dialogue density, and detected text volume. Full-feature benchmarking remains part of release validation; the app does not present a guaranteed completion time.
 
 ## Privacy
 
@@ -89,6 +89,7 @@ The logo source is `packaging/logo-source.png`. Run `python scripts/build_icons.
 
 - Apple Silicon Mac
 - macOS 14 or newer
+- Windows x64
 - Python 3.13 for development builds
 
 ## Build From Source
@@ -122,14 +123,14 @@ find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.en.srt" --mi
 find-that-text gaps "/path/to/movie.mov" --captions "/path/to/movie.en.srt"
 ```
 
-Release builds bundle the PP-OCRv6 small models. On first launch, the app copies those models into `~/Library/Application Support/Find That Text/PaddleX`; normal scans do not need internet access.
+Release builds bundle the PP-OCRv6 small models. On first launch, the app copies those models into the local application-support folder (`~/Library/Application Support/Find That Text/PaddleX` on macOS or `%LOCALAPPDATA%\Find That Text\PaddleX` on Windows); normal scans do not need internet access.
 
 ## Core Technology
 
 - Video decoding: [FFmpeg](https://ffmpeg.org/) through [PyAV 18.1.0](https://github.com/PyAV-Org/PyAV)
 - OCR: [PaddleOCR 3.7.0](https://github.com/PaddlePaddle/PaddleOCR) with PP-OCRv6 small detection and recognition models
 - Optional scene-change detection: [PySceneDetect 0.7.1](https://github.com/Breakthrough/PySceneDetect)
-- Mac interface: [PySide6 6.11.2](https://doc.qt.io/qtforpython-6/)
+- Desktop interface: [PySide6 6.11.2](https://doc.qt.io/qtforpython-6/)
 - Word plausibility: [wordfreq 3.1.1](https://github.com/rspeer/wordfreq), using offline English and Spanish small word lists
 
 ## Packaging
@@ -140,6 +141,8 @@ scripts/package_dmg.sh
 ```
 
 The build creates a PyInstaller `.app` bundle and an Apple Silicon DMG. Signing and notarization are used when Apple Developer credentials are provided. Unsigned builds may require macOS **Open** or **Open Anyway**.
+
+For Windows x64, run `scripts/build_windows.ps1` in PowerShell with Python 3.13 installed. It creates a self-contained ZIP in `dist/`; `scripts/verify_windows_bundle.py` checks the extracted executable, bundled OCR models, GUI startup, and a captioned video scan that writes reports. The Windows ZIP is not code-signed.
 
 ## License
 
