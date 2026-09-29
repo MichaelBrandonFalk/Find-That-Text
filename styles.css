@@ -92,7 +92,14 @@ h2 {
 
 .actions {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.download-buttons,
+.resource-buttons {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -324,6 +331,16 @@ main a {
 
   .button {
     width: 100%;
+  }
+
+  .actions,
+  .download-buttons,
+  .resource-buttons {
+    width: 100%;
+  }
+
+  .actions {
+    flex-direction: column;
   }
 
   .workflow,
