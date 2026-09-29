@@ -5,6 +5,14 @@ on:
     branches:
       - codex/windows-package
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Upload the verified Windows ZIP to the matching GitHub release
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
 
 jobs:
   windows-package:
@@ -33,3 +41,12 @@ jobs:
           path: dist/Find-That-Text-v*-Windows-x64.zip
           if-no-files-found: error
           retention-days: 7
+      - name: Publish verified Windows release
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          gh release upload "v$version" "dist/Find-That-Text-v$version-Windows-x64.zip"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
