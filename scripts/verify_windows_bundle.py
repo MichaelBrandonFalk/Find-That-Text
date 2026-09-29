@@ -51,6 +51,12 @@ def main() -> int:
         )
         env = os.environ.copy()
         env.pop("PADDLE_PDX_CACHE_HOME", None)
+        env.pop("PYTHONHOME", None)
+        env.pop("PYTHONPATH", None)
+        system_root = Path(env.get("SystemRoot", r"C:\Windows"))
+        env["PATH"] = os.pathsep.join(
+            str(path) for path in (system_root / "System32", system_root)
+        )
         env["FIND_THAT_TEXT_APP_SUPPORT"] = temp_dir
         log_path = Path(temp_dir) / "self-test.log"
         env["FIND_THAT_TEXT_SELF_TEST_LOG"] = str(log_path)

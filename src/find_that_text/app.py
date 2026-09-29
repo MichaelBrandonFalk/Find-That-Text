@@ -69,11 +69,14 @@ def main() -> int:
                     print(f"{observation.confidence:.3f} {observation.text}")
             if "--self-test-scan" in sys.argv:
                 from tempfile import TemporaryDirectory
+                import logging
 
                 from find_that_text.scanner import ScanSettings, scan_video
 
                 video_path = Path(sys.argv[sys.argv.index("--self-test-scan") + 1])
-                with TemporaryDirectory(prefix="find-that-text-scan-") as output_root:
+                output_dir = TemporaryDirectory(prefix="find-that-text-scan-")
+                try:
+                    output_root = output_dir.name
                     _self_test_note("scanning test video")
                     result = scan_video(
                         video_path,
@@ -92,6 +95,9 @@ def main() -> int:
                         if not report.is_file() or report.stat().st_size == 0:
                             raise RuntimeError(f"Packaged scan did not produce {report}")
                     _self_test_note("test scan reports written")
+                finally:
+                    logging.shutdown()
+                    output_dir.cleanup()
         return 0
     return run(sys.argv)
 
