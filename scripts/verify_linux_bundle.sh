@@ -10,7 +10,7 @@ for model in PP-OCRv6_small_det PP-OCRv6_small_rec; do
 done
 
 test_root="$(mktemp -d)"
-trap 'rm -rf "$test_root"' EXIT
+trap 'status=$?; if ((status != 0)); then cat "$test_root/self-test.log" 2>/dev/null || true; fi; rm -rf "$test_root"' EXIT
 mkdir -p "$test_root/home"
 ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=black:s=320x180:r=24 -frames:v 48 -c:v mpeg4 "$test_root/test.mp4"
 printf '1\n00:00:00,000 --> 00:00:00,200\nSpeaking\n' > "$test_root/test.srt"
@@ -18,7 +18,7 @@ printf '1\n00:00:00,000 --> 00:00:00,200\nSpeaking\n' > "$test_root/test.srt"
 export FIND_THAT_TEXT_APP_SUPPORT="$test_root/app-support"
 export FIND_THAT_TEXT_SELF_TEST_LOG="$test_root/self-test.log"
 export HOME="$test_root/home"
-unset PADDLE_PDX_CACHE_HOME PYTHONPATH PYTHONHOME
+unset PADDLE_PDX_CACHE_HOME PYTHONPATH PYTHONHOME LD_LIBRARY_PATH
 export PATH=/usr/bin:/bin
 
 for test_arg in --self-test --self-test-ocr; do
