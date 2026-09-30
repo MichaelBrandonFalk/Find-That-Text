@@ -26,7 +26,7 @@ jobs:
       - name: Install GUI test prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb ffmpeg libxcb-cursor0 libxkbcommon-x11-0 libgl1
+          sudo apt-get install -y --no-install-recommends xvfb ffmpeg libxcb-cursor0 libxkbcommon-x11-0 libgl1 libegl1 libopengl0
       - name: Build Linux bundle
         run: bash scripts/build_linux.sh
       - name: Verify extracted bundle on Ubuntu 22.04
@@ -55,7 +55,7 @@ jobs:
       - name: Install GUI test prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb ffmpeg libxcb-cursor0 libxkbcommon-x11-0 libgl1
+          sudo apt-get install -y --no-install-recommends xvfb ffmpeg libxcb-cursor0 libxkbcommon-x11-0 libgl1 libegl1 libopengl0
       - name: Verify extracted bundle on Ubuntu 24.04
         run: |
           version="$(tr -d '\r\n' < VERSION)"
