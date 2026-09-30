@@ -50,7 +50,7 @@ def install_bundled_paddlex_models(cache_dir: Path) -> None:
 
 def bundled_paddlex_dir() -> Path:
     if getattr(sys, "frozen", False):
-        if platform.system() == "Windows":
+        if platform.system() != "Darwin":
             return Path(sys._MEIPASS) / "PaddleX"
         executable = Path(sys.executable).resolve()
         return executable.parents[1] / "Resources" / "PaddleX"

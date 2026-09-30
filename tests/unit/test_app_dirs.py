@@ -19,3 +19,11 @@ def test_frozen_windows_models_are_read_from_bundle(tmp_path: Path, monkeypatch)
     monkeypatch.setattr(app_dirs.sys, "_MEIPASS", str(tmp_path), raising=False)
 
     assert app_dirs.bundled_paddlex_dir() == tmp_path / "PaddleX"
+
+
+def test_frozen_linux_models_are_read_from_bundle(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(app_dirs.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(app_dirs.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(app_dirs.sys, "_MEIPASS", str(tmp_path), raising=False)
+
+    assert app_dirs.bundled_paddlex_dir() == tmp_path / "PaddleX"

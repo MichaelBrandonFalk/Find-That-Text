@@ -1,0 +1,83 @@
+name: Verify Linux package
+
+on:
+  push:
+    branches:
+      - codex/linux-package
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Upload the verified Linux archive to the matching GitHub release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install GUI test prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb ffmpeg libxcb-cursor0 libxkbcommon-x11-0 libgl1
+      - name: Build Linux bundle
+        run: bash scripts/build_linux.sh
+      - name: Verify extracted bundle on Ubuntu 22.04
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          mkdir -p "$RUNNER_TEMP/find-that-text-extracted"
+          tar -C "$RUNNER_TEMP/find-that-text-extracted" -xzf "dist/Find-That-Text-v${version}-Linux-x64.tar.gz"
+          bash scripts/verify_linux_bundle.sh "$RUNNER_TEMP/find-that-text-extracted/Find That Text"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64-verified
+          path: dist/Find-That-Text-v*-Linux-x64.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  test-ubuntu-24:
+    needs: build-linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-x64-verified
+          path: dist
+      - name: Install GUI test prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb ffmpeg libxcb-cursor0 libxkbcommon-x11-0 libgl1
+      - name: Verify extracted bundle on Ubuntu 24.04
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          mkdir -p "$RUNNER_TEMP/find-that-text-extracted"
+          tar -C "$RUNNER_TEMP/find-that-text-extracted" -xzf "dist/Find-That-Text-v${version}-Linux-x64.tar.gz"
+          bash scripts/verify_linux_bundle.sh "$RUNNER_TEMP/find-that-text-extracted/Find That Text"
+
+  publish-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release
+    needs: test-ubuntu-24
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-x64-verified
+          path: dist
+      - name: Publish verified Linux release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          gh release upload "v$version" "dist/Find-That-Text-v${version}-Linux-x64.tar.gz"
