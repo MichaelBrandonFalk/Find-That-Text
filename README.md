@@ -2,11 +2,11 @@
 
 Find likely forced-text moments in a movie without rewatching the entire program.
 
-Find That Text is a free, open-source desktop utility for subtitle and localization teams. It scans visible text in video frames, groups repeated detections into screen-text moments, and produces a ranked local review report. It runs on Apple Silicon Macs and Windows x64, and keeps the video, captions, screenshots, and OCR results on the computer.
+Find That Text is a free, open-source desktop utility for subtitle and localization teams. It scans visible text in video frames, groups repeated detections into screen-text moments, and produces a ranked local review report. It runs on Apple Silicon Macs, Windows x64, and supported Linux x64 desktops, and keeps the video, captions, screenshots, and OCR results on the computer.
 
 ## Download
 
-Download the Apple Silicon DMG or Windows x64 ZIP from the [latest GitHub Release](https://github.com/MichaelBrandonFalk/Find-That-Text/releases/latest), or visit the [Find That Text website](https://michaelbrandonfalk.github.io/Find-That-Text/). For Windows, extract the entire ZIP and run `Find That Text.exe` from the extracted folder. No Python installation or model download is needed. The Windows build is unsigned, so Windows SmartScreen may ask you to confirm before opening it.
+Download the Apple Silicon DMG, Windows x64 ZIP, or Linux x64 archive from the [latest GitHub Release](https://github.com/MichaelBrandonFalk/Find-That-Text/releases/latest), or visit the [Find That Text website](https://michaelbrandonfalk.github.io/Find-That-Text/). For Windows, extract the entire ZIP and run `Find That Text.exe` from the extracted folder. On Linux, extract the `.tar.gz` and run the `Find That Text` executable inside the extracted folder. No Python installation or model download is needed. The Windows build is unsigned, so Windows SmartScreen may ask you to confirm before opening it.
 
 ## What It Finds
 
@@ -90,6 +90,7 @@ The logo source is `packaging/logo-source.png`. Run `python scripts/build_icons.
 - Apple Silicon Mac
 - macOS 14 or newer
 - Windows x64
+- Ubuntu 22.04 or 24.04 desktop on an x86-64 CPU with AVX (Linux build)
 - Python 3.13 for development builds
 
 ## Build From Source
@@ -123,7 +124,7 @@ find-that-text scan "/path/to/movie.mov" --captions "/path/to/movie.en.srt" --mi
 find-that-text gaps "/path/to/movie.mov" --captions "/path/to/movie.en.srt"
 ```
 
-Release builds bundle the PP-OCRv6 small models. On first launch, the app copies those models into the local application-support folder (`~/Library/Application Support/Find That Text/PaddleX` on macOS or `%LOCALAPPDATA%\Find That Text\PaddleX` on Windows); normal scans do not need internet access.
+Release builds bundle the PP-OCRv6 small models. On first launch, the app copies those models into the local application-support folder (`~/Library/Application Support/Find That Text/PaddleX` on macOS, `%LOCALAPPDATA%\Find That Text\PaddleX` on Windows, or `~/.find-that-text/PaddleX` on Linux); normal scans do not need internet access.
 
 ## Core Technology
 
@@ -143,6 +144,8 @@ scripts/package_dmg.sh
 The build creates a PyInstaller `.app` bundle and an Apple Silicon DMG. Signing and notarization are used when Apple Developer credentials are provided. Unsigned builds may require macOS **Open** or **Open Anyway**.
 
 For Windows x64, run `scripts/build_windows.ps1` in PowerShell with Python 3.13 installed. It creates a self-contained ZIP in `dist/`; `scripts/verify_windows_bundle.py` checks the extracted executable, bundled OCR models, GUI startup, and a captioned video scan that writes reports. The Windows ZIP is not code-signed.
+
+For Linux x64, run `bash scripts/build_linux.sh` on Ubuntu 22.04 with Python 3.13 and the `libxcb-icccm4` and `libxcb-keysyms1` packages installed. It creates a self-contained `.tar.gz` in `dist/`; `scripts/verify_linux_bundle.sh` checks the extracted executable, bundled OCR models, GUI startup, and a captioned video scan that writes reports. The Linux build is CPU-only and has been verified on Ubuntu 22.04 and 24.04 runners.
 
 ## License
 

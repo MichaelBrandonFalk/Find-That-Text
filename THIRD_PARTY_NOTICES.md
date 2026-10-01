@@ -34,6 +34,12 @@ This file summarizes the notable third-party components selected for the initial
 - Use: macOS desktop GUI.
 - Note: Distribution must preserve LGPL compliance, including notices and the ability to replace LGPL libraries where required.
 
+## Linux XCB GUI libraries
+
+- Components: `libxcb-icccm4` and `libxcb-keysyms1` from Ubuntu 22.04.
+- Use: Allow the bundled Qt desktop interface to start without separately installing these libraries.
+- License: MIT/X11-style terms; the Linux archive includes each package's complete `copyright` notice under `_internal/licenses/`.
+
 ## PyInstaller
 
 - Project: https://pyinstaller.org/

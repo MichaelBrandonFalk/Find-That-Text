@@ -51,11 +51,18 @@ if len(mkl_libraries) != 1:
     raise RuntimeError(f"Expected one Paddle MKL library, found {mkl_libraries}")
 # Paddle loads this library by name at runtime, so it must be beside the bootloader libraries.
 binaries.append((str(mkl_libraries[0]), "."))
-for library_name in ("libxcb-icccm.so.4", "libxcb-keysyms.so.1"):
+for package_name, library_name in (
+    ("libxcb-icccm4", "libxcb-icccm.so.4"),
+    ("libxcb-keysyms1", "libxcb-keysyms.so.1"),
+):
     library = Path("/usr/lib/x86_64-linux-gnu") / library_name
     if not library.is_file():
         raise FileNotFoundError(f"Required Linux GUI library missing: {library}")
     binaries.append((str(library), "."))
+    license_file = Path("/usr/share/doc") / package_name / "copyright"
+    if not license_file.is_file():
+        raise FileNotFoundError(f"Required Linux GUI license missing: {license_file}")
+    datas.append((str(license_file), f"licenses/{package_name}"))
 
 a = Analysis(
     [str(project_root / "src" / "find_that_text" / "app.py")],

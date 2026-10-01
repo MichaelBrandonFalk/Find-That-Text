@@ -7,6 +7,8 @@ test -x "$executable"
 test -f "$bundle/_internal/libmklml_intel.so"
 test -f "$bundle/_internal/libxcb-icccm.so.4"
 test -f "$bundle/_internal/libxcb-keysyms.so.1"
+test -f "$bundle/_internal/licenses/libxcb-icccm4/copyright"
+test -f "$bundle/_internal/licenses/libxcb-keysyms1/copyright"
 for model in PP-OCRv6_small_det PP-OCRv6_small_rec; do
   test -d "$bundle/_internal/PaddleX/official_models/$model"
   test -n "$(ls -A "$bundle/_internal/PaddleX/official_models/$model")"
