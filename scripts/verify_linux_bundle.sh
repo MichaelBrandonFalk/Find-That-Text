@@ -4,6 +4,7 @@ set -euo pipefail
 bundle="$(cd "$1" && pwd)"
 executable="$bundle/Find That Text"
 test -x "$executable"
+test -f "$bundle/_internal/libmklml_intel.so"
 for model in PP-OCRv6_small_det PP-OCRv6_small_rec; do
   test -d "$bundle/_internal/PaddleX/official_models/$model"
   test -n "$(ls -A "$bundle/_internal/PaddleX/official_models/$model")"

@@ -41,10 +41,21 @@ for model_name in ["PP-OCRv6_small_det", "PP-OCRv6_small_rec"]:
         raise FileNotFoundError(f"Required bundled OCR model missing: {model_dir}")
     datas.append((str(model_dir), f"PaddleX/official_models/{model_name}"))
 
+binaries = collect_dynamic_libs("paddle")
+paddle_spec = importlib.util.find_spec("paddle")
+if not paddle_spec or not paddle_spec.submodule_search_locations:
+    raise RuntimeError("Paddle package is required to build the Linux bundle")
+paddle_root = Path(paddle_spec.submodule_search_locations[0])
+mkl_libraries = list(paddle_root.rglob("libmklml_intel.so"))
+if len(mkl_libraries) != 1:
+    raise RuntimeError(f"Expected one Paddle MKL library, found {mkl_libraries}")
+# Paddle loads this library by name at runtime, so it must be beside the bootloader libraries.
+binaries.append((str(mkl_libraries[0]), "."))
+
 a = Analysis(
     [str(project_root / "src" / "find_that_text" / "app.py")],
     pathex=[str(project_root / "src")],
-    binaries=collect_dynamic_libs("paddle"),
+    binaries=binaries,
     datas=datas,
     hiddenimports=[
         "paddle",
