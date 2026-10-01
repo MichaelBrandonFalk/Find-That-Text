@@ -27,7 +27,10 @@ for test_arg in --self-test --self-test-ocr; do
   "$executable" "$test_arg"
 done
 printf 'Running packaged --self-test-gui\n'
-xvfb-run -a "$executable" --self-test-gui
+qt_plugin="$(find "$bundle/_internal" -name libqxcb.so -print -quit)"
+test -n "$qt_plugin"
+ldd "$qt_plugin"
+QT_DEBUG_PLUGINS=1 xvfb-run -a "$executable" --self-test-gui
 printf 'Running packaged --self-test-scan\n'
 "$executable" --self-test-scan "$test_root/test.mp4"
 
