@@ -5,6 +5,8 @@ bundle="$(cd "$1" && pwd)"
 executable="$bundle/Find That Text"
 test -x "$executable"
 test -f "$bundle/_internal/libmklml_intel.so"
+test -f "$bundle/_internal/libxcb-icccm.so.4"
+test -f "$bundle/_internal/libxcb-keysyms.so.1"
 for model in PP-OCRv6_small_det PP-OCRv6_small_rec; do
   test -d "$bundle/_internal/PaddleX/official_models/$model"
   test -n "$(ls -A "$bundle/_internal/PaddleX/official_models/$model")"
@@ -29,8 +31,8 @@ done
 printf 'Running packaged --self-test-gui\n'
 qt_plugin="$(find "$bundle/_internal" -name libqxcb.so -print -quit)"
 test -n "$qt_plugin"
-ldd "$qt_plugin"
-QT_DEBUG_PLUGINS=1 xvfb-run -a "$executable" --self-test-gui
+LD_LIBRARY_PATH="$bundle/_internal" ldd "$qt_plugin"
+xvfb-run -a "$executable" --self-test-gui
 printf 'Running packaged --self-test-scan\n'
 "$executable" --self-test-scan "$test_root/test.mp4"
 
